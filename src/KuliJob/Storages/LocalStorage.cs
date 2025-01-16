@@ -125,7 +125,7 @@ internal class LocalStorage : IJobStorage
 internal class SqliteJobInput
 {
     [PrimaryKey]
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     [NotNull]
     [Indexed]
     public string JobName { get; set; } = null!;
