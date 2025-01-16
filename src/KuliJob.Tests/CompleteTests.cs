@@ -5,7 +5,7 @@ namespace KuliJob.Tests;
 public class CompleteTests
 {
     [Test]
-    public async Task ShouldCompleteJob()
+    public async Task ShouldCompleteJobImmediately()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -16,7 +16,7 @@ public class CompleteTests
         var jobService = sp.GetRequiredService<JobServiceHosted>();
         var jobScheduler = sp.GetRequiredService<IJobScheduler>();
         await jobService.StartAsync(default);
-        var jobId = await jobScheduler.ScheduleJob("handler-job", "data");
+        var jobId = await jobScheduler.ScheduleJobNow("handler-job", "data");
         await Task.Delay(550);
         var job = await jobStorage.GetCompletedJobById(jobId);
         await Assert.That(job).IsNotNull();

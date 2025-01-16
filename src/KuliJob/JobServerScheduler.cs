@@ -1,3 +1,4 @@
+using System.Text.Json;
 using KuliJob.Storages;
 
 namespace KuliJob;
@@ -47,12 +48,14 @@ public class JobServerScheduler(
         cancellation.Dispose();
     }
 
-    public async Task<string> ScheduleJob(string jobName, string data)
+    public async Task<string> ScheduleJob<T>(string jobName, T data, DateTimeOffset startAfter)
     {
+        var jobData = JsonSerializer.Serialize(data);
         var jobInput = new JobInput
         {
             JobName = jobName,
-            JobData = data,
+            JobData = jobData,
+            StartAfter = startAfter,
         };
         await storage.InsertJob(jobInput);
         return jobInput.Id;
