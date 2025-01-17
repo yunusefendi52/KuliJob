@@ -8,7 +8,7 @@ public class ScheduleTests : BaseTest
     public async Task ShouldFailJobWhenTimedOut()
     {
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("delay_handler_job", "data");
+        var jobId = await JobScheduler.ScheduleJobNow("delay_handler_job", []);
         await Task.Delay(1100);
         var job = await jobStorage.GetJobByState(jobId, JobState.Failed);
         await Assert.That(job).IsNotNull();
@@ -20,7 +20,7 @@ public class ScheduleTests : BaseTest
     public async Task ShouldCompleteJobImmediately()
     {
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("handler_job", "data");
+        var jobId = await JobScheduler.ScheduleJobNow("handler_job", []);
         await Task.Delay(550);
         var job = await jobStorage.GetJobByState(jobId, JobState.Completed);
         await Assert.That(job).IsNotNull();
@@ -31,7 +31,7 @@ public class ScheduleTests : BaseTest
     public async Task ShouldFailJobWhenThrowsException()
     {
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("throws_handler_job", "data");
+        var jobId = await JobScheduler.ScheduleJobNow("throws_handler_job", []);
         await Task.Delay(1100);
         var job = await jobStorage.GetJobByState(jobId, JobState.Failed);
         await Assert.That(job).IsNotNull();
@@ -44,7 +44,7 @@ public class ScheduleTests : BaseTest
     {
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var startAfter = DateTimeOffset.UtcNow.AddMinutes(1);
-        var jobId = await JobScheduler.ScheduleJob("handler_job", "data", startAfter);
+        var jobId = await JobScheduler.ScheduleJob("handler_job", [], startAfter);
         await Task.Delay(550);
         var jobCreated = await jobStorage.GetJobByState(jobId, JobState.Created);
         await Assert.That(jobCreated).IsNotNull();

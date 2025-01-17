@@ -8,7 +8,11 @@ public class JobContext
 {
     public required IServiceProvider Services { get; init; }
     public required string JobName { get; set; } = null!;
-    public required string JobData { get; set; } = null!;
+    public required JobDataMap JobData { get; set; } = null!;
+}
+
+public class JobDataMap : Dictionary<string, object>
+{
 }
 
 public class JobConfiguration
@@ -51,7 +55,7 @@ public class JobServerScheduler(
         cancellation.Dispose();
     }
 
-    public async Task<string> ScheduleJob<T>(string jobName, T data, DateTimeOffset startAfter)
+    public async Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter)
     {
         var jobData = JsonSerializer.Serialize(data);
         var jobInput = new JobInput
@@ -100,11 +104,12 @@ public class JobServerScheduler(
             await using var serviceSCope = serviceProvider.CreateAsyncScope();
             var sp = serviceSCope.ServiceProvider;
             var jobHandler = sp.GetKeyedService<IJob>($"kulijob.{jobInput.JobName}") ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
+            var jobDataMap = JsonSerializer.Deserialize<JobDataMap>(jobInput.JobData);
             var jobContext = new JobContext
             {
                 Services = sp,
                 JobName = jobInput.JobName,
-                JobData = jobInput.JobData,
+                JobData = jobDataMap!,
             };
             await jobHandler.Execute(jobContext, cts.Token);
             await storage.CompleteJobById(jobInput);
