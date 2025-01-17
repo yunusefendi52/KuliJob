@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using KuliJob.Storages;
 
@@ -10,23 +11,25 @@ public class JobContext
     public required string JobData { get; set; } = null!;
 }
 
-public interface IJob
-{
-    Task Execute(JobContext context, CancellationToken cancellationToken = default);
-}
-
 public class JobConfiguration
 {
     public int Worker { get; set; } = 10;
-    public bool UseSqlite { get; set; }
     public int MinPollingIntervalMs { get; set; } = 500;
+    public int JobTimeoutMs { get; set; } = 15_000;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    internal IServiceCollection ServiceCollection { get; init; } = null!;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    internal bool IsTest { get; set; }
 }
 
 public class JobServerScheduler(
     ILogger<JobServerScheduler> logger,
     IServiceProvider serviceProvider,
     IJobStorage storage,
-    JobConfiguration configuration) : IJobScheduler, IDisposable
+    JobConfiguration configuration,
+    [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider) : IJobScheduler, IDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 
@@ -80,7 +83,7 @@ public class JobServerScheduler(
         }
     }
 
-    private async ValueTask ProcessJob((JobInput JobInput, bool Success) value, CancellationToken token)
+    private async ValueTask ProcessJob((JobInput JobInput, bool Success) value, CancellationToken cancellationToken)
     {
         var (jobInput, fetched) = value;
         if (!fetched)
@@ -89,31 +92,27 @@ public class JobServerScheduler(
             return;
         }
 
-        var jobHandler = serviceProvider.GetKeyedService<IJob>(jobInput.JobName);
-        if (jobHandler is not null)
+        try
         {
-            try
+            using var timeoutCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(configuration.JobTimeoutMs), timeProvider);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
+            cts.Token.ThrowIfCancellationRequested();
+            await using var serviceSCope = serviceProvider.CreateAsyncScope();
+            var sp = serviceSCope.ServiceProvider;
+            var jobHandler = sp.GetKeyedService<IJob>($"kulijob.{jobInput.JobName}") ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
+            var jobContext = new JobContext
             {
-                using var ctsToken = new CancellationTokenSource(TimeSpan.FromMinutes(15));
-                await using var sp = serviceProvider.CreateAsyncScope();
-                var jobContext = new JobContext
-                {
-                    Services = sp.ServiceProvider,
-                    JobName = jobInput.JobName,
-                    JobData = jobInput.JobData,
-                };
-                await jobHandler.Execute(jobContext, ctsToken.Token);
-                await storage.CompleteJobById(jobInput);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Job error {jobId} {jobName}", jobInput.Id, jobInput.JobName);
-                await storage.FailJobById(jobInput, ex.Message);
-            }
+                Services = sp,
+                JobName = jobInput.JobName,
+                JobData = jobInput.JobData,
+            };
+            await jobHandler.Execute(jobContext, cts.Token);
+            await storage.CompleteJobById(jobInput);
         }
-        else
+        catch (Exception ex)
         {
-            throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
+            logger.LogError(ex, "Job error {jobId} {jobName}", jobInput.Id, jobInput.JobName);
+            await storage.FailJobById(jobInput, ex.Message);
         }
     }
 }

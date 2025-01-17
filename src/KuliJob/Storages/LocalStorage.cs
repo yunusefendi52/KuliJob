@@ -3,27 +3,13 @@ using SQLite;
 
 namespace KuliJob.Storages;
 
-internal class LocalStorage : IJobStorage
+internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider) : IJobStorage
 {
-    readonly SQLiteConnection db;
-    private readonly JobConfiguration configuration;
+    SQLiteConnection db = null!;
 
-    public LocalStorage(Stream? stream, string? filePath, JobConfiguration configuration)
+    public void Init(string connectionString)
     {
-        if (stream is not null)
-        {
-            db = new(":memory:");
-        }
-        else if (!string.IsNullOrWhiteSpace(filePath))
-        {
-            db = new(filePath);
-        }
-        else
-        {
-            throw new ArgumentException("Should not happen db null");
-        }
-
-        this.configuration = configuration;
+        db = new(connectionString);
     }
 
     public Task StartStorage()
@@ -46,7 +32,7 @@ internal class LocalStorage : IJobStorage
         // Need handle concurrency issue with multiple worker
         while (!cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(configuration.MinPollingIntervalMs, cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
             while (true)
             {
                 db.BeginTransaction();
@@ -113,10 +99,10 @@ internal class LocalStorage : IJobStorage
         return Task.CompletedTask;
     }
 
-    public Task<JobInput?> GetCompletedJobById(string jobId)
+    public Task<JobInput?> GetJobByState(string jobId, JobState jobState)
     {
         return Task.FromResult(db.Table<SqliteJobInput>()
-            .Where(v => v.Id == jobId && v.JobState == JobState.Completed)
+            .Where(v => v.Id == jobId && v.JobState == jobState)
             .Select(v => v.ToJobInput())
             .SingleOrDefault());
     }

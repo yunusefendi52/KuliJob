@@ -1,4 +1,5 @@
 using KuliJob.Storages;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace KuliJob;
 
@@ -8,32 +9,37 @@ public static class JobExtensions
         this IServiceCollection serviceCollection,
         Action<JobConfiguration>? configure = null)
     {
-        var config = new JobConfiguration();
+        var config = new JobConfiguration()
+        {
+            ServiceCollection = serviceCollection,
+        };
         configure?.Invoke(config);
+        config.UseSqlite(":memory:");
         serviceCollection.AddSingleton(config);
-        RegisterStorage(serviceCollection, config);
         serviceCollection.AddSingleton<JobServerScheduler>();
         serviceCollection.AddSingleton<IJobScheduler>(sp => sp.GetRequiredService<JobServerScheduler>());
         serviceCollection.AddSingleton<JobServiceHosted>();
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());
+        if (!config.IsTest)
+        {
+            serviceCollection.AddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
+        }
     }
 
-    static void RegisterStorage(
-        IServiceCollection serviceCollection,
-        JobConfiguration configuration)
+    public static void UseSqlite(this JobConfiguration jobConfiguration, string connectionString)
     {
-        if (configuration.UseSqlite)
+        jobConfiguration.ServiceCollection.TryAddSingleton<LocalStorage>();
+        jobConfiguration.ServiceCollection.TryAddSingleton<IJobStorage>(sp =>
         {
-            serviceCollection.AddSingleton<IJobStorage>(sp => new LocalStorage(null, "kulijob.db", sp.GetRequiredService<JobConfiguration>()));
-        }
-        else
-        {
-            serviceCollection.AddSingleton<IJobStorage>(sp => new LocalStorage(new MemoryStream(), null, sp.GetRequiredService<JobConfiguration>()));
-        }
+            var configuration = sp.GetRequiredService<JobConfiguration>();
+            var storage = sp.GetRequiredService<LocalStorage>();
+            storage.Init(connectionString);
+            return storage;
+        });
     }
 
     public static void AddKuliJob<T>(this IServiceCollection serviceCollection, string jobName) where T : class, IJob
     {
-        serviceCollection.AddKeyedScoped<IJob, T>(jobName);
+        serviceCollection.AddKeyedScoped<IJob, T>($"kulijob.{jobName}");
     }
 }

@@ -1,10 +1,8 @@
-using System.Runtime.CompilerServices;
-
 namespace KuliJob.Storages;
 
 public interface IJobStorage
 {
-    Task<JobInput?> GetCompletedJobById(string jobId);
+    Task<JobInput?> GetJobByState(string jobId, JobState jobState);
     Task CancelJobById(JobInput jobInput);
     Task CompleteJobById(JobInput jobInput);
     Task FailJobById(JobInput jobInput, string failedMessage);
