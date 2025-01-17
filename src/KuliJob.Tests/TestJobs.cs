@@ -23,3 +23,19 @@ public class ThrowsHandlerJob : IJob
         throw new Exception("ThrowsHandlerJob throws exception");
     }
 }
+
+
+public class CheckDataHandlerJob : IJob
+{
+    public async Task Execute(JobContext context, CancellationToken cancellationToken = default)
+    {
+        var txtFile = context.JobData.GetString("txtFile");
+        context.JobData.GetBool("myBool");
+        context.JobData.GetInt("myInt");
+        context.JobData.GetLong("myLong");
+        context.JobData.GetDouble("myDouble");
+        context.JobData.GetDateTime("myDateTime");
+        context.JobData.GetDateTimeOffset("myDateOffset");
+        await File.WriteAllTextAsync(txtFile, "check_data_handler", cancellationToken);
+    }
+}

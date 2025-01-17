@@ -118,6 +118,14 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
             .Select(v => v.ToJobInput())
             .SingleOrDefault());
     }
+
+    public Task<JobInput?> GetJobById(string jobId)
+    {
+        return Task.FromResult(db.Table<SqliteJobInput>()
+            .Where(v => v.Id == jobId)
+            .Select(v => v.ToJobInput())
+            .SingleOrDefault());
+    }
 }
 
 internal class SqliteJobInput

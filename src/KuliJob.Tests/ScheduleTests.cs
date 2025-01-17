@@ -50,18 +50,43 @@ public class ScheduleTests : BaseTest
         await Assert.That(jobCreated).IsNotNull();
         await Assert.That(jobCreated!.StartAfter).IsEqualTo(startAfter);
         await Assert.That(jobCreated!.JobState).IsEqualTo(JobState.Created);
-        
+
         await JobScheduler.CancelJob(jobId);
         var jobCancelled = await jobStorage.GetJobByState(jobId, JobState.Cancelled);
         await Assert.That(jobCancelled).IsNotNull();
         await Assert.That(jobCancelled!.StartAfter).IsEqualTo(startAfter);
         await Assert.That(jobCancelled!.CancelledOn).IsNotNull();
         await Assert.That(jobCancelled.JobState).IsEqualTo(JobState.Cancelled);
-        
+
         await JobScheduler.ResumeJob(jobId);
         var jobResumed = await jobStorage.GetJobByState(jobId, JobState.Created);
         await Assert.That(jobResumed).IsNotNull();
         await Assert.That(jobResumed!.StartAfter).IsEqualTo(startAfter);
         await Assert.That(jobResumed!.JobState).IsEqualTo(JobState.Created);
+    }
+
+    [Test]
+    public async Task ShouldReceiveDataInJobWhenScheduledJob()
+    {
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var txtFile = Path.GetTempFileName();
+        var jobId = await JobScheduler.ScheduleJobNow("check_data_handler_job", new()
+        {
+            { "txtFile", txtFile },
+            { "myInt", int.MaxValue },
+            { "myLong", long.MaxValue },
+            { "myBool", true },
+            { "myDouble", double.MaxValue },
+            { "myDateOffset", DateTimeOffset.UtcNow },
+            { "myDateTime", DateTime.UtcNow },
+        });
+        await Task.Delay(600);
+        var job = await jobStorage.GetJobById(jobId);
+        await Assert.That(job).IsNotNull();
+        await Assert.That(job!.FailedMessage).IsNullOrWhitespace();
+        await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
+
+        var txt = await File.ReadAllTextAsync(txtFile);
+        await Assert.That(txt).IsEqualTo("check_data_handler");
     }
 }

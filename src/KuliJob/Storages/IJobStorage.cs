@@ -3,6 +3,7 @@ namespace KuliJob.Storages;
 public interface IJobStorage
 {
     Task<JobInput?> GetJobByState(string jobId, JobState jobState);
+    Task<JobInput?> GetJobById(string jobId);
     Task CancelJobById(string jobId);
     Task CompleteJobById(JobInput jobInput);
     Task FailJobById(JobInput jobInput, string failedMessage);

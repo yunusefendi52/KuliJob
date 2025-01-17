@@ -13,6 +13,45 @@ public class JobContext
 
 public class JobDataMap : Dictionary<string, object>
 {
+    public string GetString(string key)
+    {
+        return ((JsonElement)this[key]).GetString() ?? throw new ArgumentException($"Key {key} is not a string");
+    }
+
+    public int GetInt(string key)
+    {
+        return ((JsonElement)this[key]).GetInt32();
+    }
+
+    public long GetLong(string key)
+    {
+        return ((JsonElement)this[key]).GetInt64();
+    }
+    
+    public double GetDouble(string key)
+    {
+        return ((JsonElement)this[key]).TryGetDouble(out var value) ? value : throw new ArgumentException($"Key {key} is not a double");
+    }
+
+    public DateTimeOffset GetDateTimeOffset(string key)
+    {
+        return ((JsonElement)this[key]).GetDateTimeOffset();
+    }
+
+    public DateTime GetDateTime(string key)
+    {
+        return ((JsonElement)this[key]).GetDateTime();
+    }
+
+    public bool GetBool(string key)
+    {
+        return ((JsonElement)this[key]).GetBoolean();
+    }
+
+    public T? Get<T>(string key)
+    {
+        return ((JsonElement)this[key]).Deserialize<T>();
+    }
 }
 
 public class JobConfiguration
