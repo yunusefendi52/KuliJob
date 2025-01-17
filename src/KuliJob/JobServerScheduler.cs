@@ -115,4 +115,14 @@ public class JobServerScheduler(
             await storage.FailJobById(jobInput, ex.Message);
         }
     }
+
+    public async Task CancelJob(string jobId)
+    {
+        await storage.CancelJobById(jobId);
+    }
+
+    public async Task ResumeJob(string jobId)
+    {
+        await storage.ResumeJob(jobId);
+    }
 }

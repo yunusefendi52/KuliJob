@@ -38,4 +38,30 @@ public class ScheduleTests : BaseTest
         await Assert.That(job!.FailedOn).IsNotNull();
         await Assert.That(job!.FailedMessage).IsEqualTo("ThrowsHandlerJob throws exception");
     }
+
+    [Test]
+    public async Task ShouldBeAbleToCancelAndResumeJob()
+    {
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var startAfter = DateTimeOffset.UtcNow.AddMinutes(1);
+        var jobId = await JobScheduler.ScheduleJob("handler_job", "data", startAfter);
+        await Task.Delay(550);
+        var jobCreated = await jobStorage.GetJobByState(jobId, JobState.Created);
+        await Assert.That(jobCreated).IsNotNull();
+        await Assert.That(jobCreated!.StartAfter).IsEqualTo(startAfter);
+        await Assert.That(jobCreated!.JobState).IsEqualTo(JobState.Created);
+        
+        await JobScheduler.CancelJob(jobId);
+        var jobCancelled = await jobStorage.GetJobByState(jobId, JobState.Cancelled);
+        await Assert.That(jobCancelled).IsNotNull();
+        await Assert.That(jobCancelled!.StartAfter).IsEqualTo(startAfter);
+        await Assert.That(jobCancelled!.CancelledOn).IsNotNull();
+        await Assert.That(jobCancelled.JobState).IsEqualTo(JobState.Cancelled);
+        
+        await JobScheduler.ResumeJob(jobId);
+        var jobResumed = await jobStorage.GetJobByState(jobId, JobState.Created);
+        await Assert.That(jobResumed).IsNotNull();
+        await Assert.That(jobResumed!.StartAfter).IsEqualTo(startAfter);
+        await Assert.That(jobResumed!.JobState).IsEqualTo(JobState.Created);
+    }
 }

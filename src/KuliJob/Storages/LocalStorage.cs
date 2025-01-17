@@ -76,11 +76,12 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
         return Task.CompletedTask;
     }
 
-    public Task CancelJobById(JobInput jobInput)
+    public Task CancelJobById(string jobId)
     {
+        var jobInput = db.Find<SqliteJobInput>(jobId);
         jobInput.JobState = JobState.Cancelled;
         jobInput.CancelledOn = DateTimeOffset.UtcNow;
-        if (db.Update(jobInput.ToSqliteJobInput()) != 1)
+        if (db.Update(jobInput) != 1)
         {
             throw new ArgumentException($"Failed cancel job {jobInput.Id}");
         }
@@ -95,6 +96,17 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
         if (db.Update(jobInput.ToSqliteJobInput()) != 1)
         {
             throw new ArgumentException($"Failed fail job {jobInput.Id}");
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ResumeJob(string jobId)
+    {
+        var jobInput = db.Find<SqliteJobInput>(jobId);
+        jobInput.JobState = JobState.Created;
+        if (db.Update(jobInput) != 1)
+        {
+            throw new ArgumentException($"Failed to resume job {jobInput.Id}");
         }
         return Task.CompletedTask;
     }

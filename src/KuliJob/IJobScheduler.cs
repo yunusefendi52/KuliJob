@@ -8,4 +8,6 @@ public interface IJobScheduler
         return ScheduleJob(jobName, data, DateTimeOffset.UtcNow);
     }
     Task<string> ScheduleJob<T>(string jobName, T data, DateTimeOffset startAfter);
+    Task CancelJob(string jobId);
+    Task ResumeJob(string jobId);
 }
