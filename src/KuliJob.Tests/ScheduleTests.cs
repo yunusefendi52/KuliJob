@@ -2,14 +2,13 @@
 
 namespace KuliJob.Tests;
 
-public class ScheduleTests
+public class ScheduleTests : BaseTest
 {
     [Test]
     public async Task ShouldFailJobWhenTimedOut()
     {
-        var (sp, jobScheduler) = await SetupServier.StartServerSchedulerAsync();
-        var jobStorage = sp.GetRequiredService<IJobStorage>();
-        var jobId = await jobScheduler.ScheduleJobNow("delay_handler_job", "data");
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var jobId = await JobScheduler.ScheduleJobNow("delay_handler_job", "data");
         await Task.Delay(1100);
         var job = await jobStorage.GetJobByState(jobId, JobState.Failed);
         await Assert.That(job).IsNotNull();
@@ -20,9 +19,8 @@ public class ScheduleTests
     [Test]
     public async Task ShouldCompleteJobImmediately()
     {
-        var (sp, jobScheduler) = await SetupServier.StartServerSchedulerAsync();
-        var jobStorage = sp.GetRequiredService<IJobStorage>();
-        var jobId = await jobScheduler.ScheduleJobNow("handler_job", "data");
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var jobId = await JobScheduler.ScheduleJobNow("handler_job", "data");
         await Task.Delay(550);
         var job = await jobStorage.GetJobByState(jobId, JobState.Completed);
         await Assert.That(job).IsNotNull();
@@ -32,9 +30,8 @@ public class ScheduleTests
     [Test]
     public async Task ShouldFailJobWhenThrowsException()
     {
-        var (sp, jobScheduler) = await SetupServier.StartServerSchedulerAsync();
-        var jobStorage = sp.GetRequiredService<IJobStorage>();
-        var jobId = await jobScheduler.ScheduleJobNow("throws_handler_job", "data");
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var jobId = await JobScheduler.ScheduleJobNow("throws_handler_job", "data");
         await Task.Delay(1100);
         var job = await jobStorage.GetJobByState(jobId, JobState.Failed);
         await Assert.That(job).IsNotNull();
