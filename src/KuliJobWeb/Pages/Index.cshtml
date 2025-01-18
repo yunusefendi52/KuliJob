@@ -29,6 +29,7 @@
     var filterJobs = new string[] { "All", "Created", "Retry", "Active", "Completed", "Cancelled", "Failed" };
     var selectedJobState = filterJobs.SingleOrDefault(v => string.Equals(FilterJobState, v,
     StringComparison.InvariantCultureIgnoreCase));
+    selectedJobState ??= filterJobs[0];
 }
 
 <ul class="nav nav-tabs">
@@ -36,7 +37,8 @@
     {
         var isActive = selectedJobState == jobState;
         <li class="nav-item">
-            <a class="nav-link @(isActive ? "active" : "")" aria-current="page" href="?page=@(PageIndex)&job-state=@jobState">@jobState</a>
+            <a class="nav-link @(isActive ? "active" : "")" aria-current="page"
+                href="?page=@(PageIndex)&job-state=@jobState">@jobState</a>
         </li>
     }
 </ul>
