@@ -1,7 +1,8 @@
 using KuliJob.Storages;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using KuliJob;
 
-namespace KuliJob;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static class JobExtensions
 {
@@ -38,8 +39,8 @@ public static class JobExtensions
         });
     }
 
-    public static void AddKuliJob<T>(this IServiceCollection serviceCollection, string jobName) where T : class, IJob
+    public static void AddKuliJob<T>(this JobConfiguration configuration, string jobName) where T : class, IJob
     {
-        serviceCollection.AddKeyedScoped<IJob, T>($"kulijob.{jobName}");
+        configuration.ServiceCollection.AddKeyedScoped<IJob, T>($"kulijob.{jobName}");
     }
 }

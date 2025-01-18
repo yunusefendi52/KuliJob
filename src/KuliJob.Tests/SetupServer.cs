@@ -10,11 +10,11 @@ public static class SetupServier
         {
             v.JobTimeoutMs = 450;
             v.IsTest = true;
+            v.AddKuliJob<HandlerJob>("handler_job");
+            v.AddKuliJob<DelayHandlerJob>("delay_handler_job");
+            v.AddKuliJob<ThrowsHandlerJob>("throws_handler_job");
+            v.AddKuliJob<CheckDataHandlerJob>("check_data_handler_job");
         });
-        services.AddKuliJob<HandlerJob>("handler_job");
-        services.AddKuliJob<DelayHandlerJob>("delay_handler_job");
-        services.AddKuliJob<ThrowsHandlerJob>("throws_handler_job");
-        services.AddKuliJob<CheckDataHandlerJob>("check_data_handler_job");
         services.AddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var sp = services.BuildServiceProvider();
         var jobService = sp.GetRequiredService<JobServiceHosted>();

@@ -126,6 +126,20 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
             .Select(v => v.ToJobInput())
             .SingleOrDefault());
     }
+
+    public Task<IEnumerable<JobInput>> GetLatestJobs(int page, int limit, JobState? jobState = null)
+    {
+        var offset = (page - 1) * limit;
+        var q = db.Table<SqliteJobInput>()
+            .Skip(offset)
+            .Take(limit)
+            .OrderByDescending(v => v.StartedOn);
+        if (jobState != null)
+        {
+            q = q.Where(v => v.JobState == jobState);
+        }
+        return Task.FromResult(q.Select(v => v.ToJobInput()));
+    }
 }
 
 internal class SqliteJobInput
