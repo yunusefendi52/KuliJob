@@ -7,16 +7,39 @@
     [FromQuery(Name = "page")]
     public int PageIndex { get; set; } = 1;
 
+    [FromQuery(Name = "job-state")]
+    public string? FilterJobState { get; set; }
+
     public IEnumerable<KuliJob.JobInput>? Jobs { get; set; }
 
     public async Task OnGetAsync()
     {
-        Jobs = await jobStorage.GetLatestJobs(PageIndex, 25);
+        KuliJob.JobState? jobState = null;
+        if (Enum.TryParse<JobState>(FilterJobState, out var result))
+        {
+            jobState = result;
+        }
+        Jobs = await jobStorage.GetLatestJobs(PageIndex, 25, jobState);
     }
 }
 
 <h3>Jobs</h3>
 
+@{
+    var filterJobs = new string[] { "All", "Created", "Retry", "Active", "Completed", "Cancelled", "Failed" };
+    var selectedJobState = filterJobs.SingleOrDefault(v => string.Equals(FilterJobState, v,
+    StringComparison.InvariantCultureIgnoreCase));
+}
+
+<ul class="nav nav-tabs">
+    @foreach (var jobState in filterJobs)
+    {
+        var isActive = selectedJobState == jobState;
+        <li class="nav-item">
+            <a class="nav-link @(isActive ? "active" : "")" aria-current="page" href="?page=@(PageIndex)&job-state=@jobState">@jobState</a>
+        </li>
+    }
+</ul>
 
 <table class="table">
     <thead>
@@ -70,12 +93,13 @@
 
 <ul class="pagination">
     <li class="page-item">
-        <a class="page-link @(PageIndex == 1 ? "disabled" : "")" href="/?page=@(Math.Max(PageIndex - 1, 1))" aria-label="Previous">
+        <a class="page-link @(PageIndex == 1 ? "disabled" : "")"
+            href="/?page=@(Math.Max(PageIndex - 1, 1))&job-state=@(selectedJobState)" aria-label="Previous">
             <span aria-hidden="true">&laquo;</span>
         </a>
     </li>
     <li class="page-item">
-        <a class="page-link" href="/?page=@(PageIndex + 1)" aria-label="Next">
+        <a class="page-link" href="/?page=@(PageIndex + 1)&job-state=@(selectedJobState)" aria-label="Next">
             <span aria-hidden="true">&raquo;</span>
         </a>
     </li>
