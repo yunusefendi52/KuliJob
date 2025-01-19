@@ -12,4 +12,5 @@ public interface IJobStorage
     Task InsertJob(JobInput jobInput);
     Task StartStorage();
     Task ResumeJob(string jobId);
+    Task<JobInput> RetryJob(string jobId, int retryDelay);
 }

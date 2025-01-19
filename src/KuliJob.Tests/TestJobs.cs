@@ -39,3 +39,17 @@ public class CheckDataHandlerJob : IJob
         await File.WriteAllTextAsync(txtFile, "check_data_handler", cancellationToken);
     }
 }
+
+public class ConditionalThrowsHandlerJob : IJob
+{
+    public Task Execute(JobContext context, CancellationToken cancellationToken = default)
+    {
+        var throwAtCount = context.JobData.GetInt("throwAtCount");
+        if (context.RetryCount <= throwAtCount)
+        {
+            throw new Exception("ConditionalThrowsHandlerJob throws exception");
+        }
+
+        return Task.CompletedTask;
+    }
+}

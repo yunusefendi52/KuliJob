@@ -9,9 +9,10 @@ public class ScheduleTests : BaseTest
     {
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("delay_handler_job", []);
-        await Task.Delay(1100);
-        var job = await jobStorage.GetJobByState(jobId, JobState.Failed);
+        await WaitJobTicks(2);
+        var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
+        await Assert.That(job!.JobState).IsEqualTo(JobState.Failed);
         await Assert.That(job!.FailedOn).IsNotNull();
         await Assert.That(job!.FailedMessage).IsEqualTo("A task was canceled.");
     }
@@ -21,9 +22,10 @@ public class ScheduleTests : BaseTest
     {
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("handler_job", []);
-        await Task.Delay(550);
-        var job = await jobStorage.GetJobByState(jobId, JobState.Completed);
+        await WaitJobTicks();
+        var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
+        await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job!.CompletedOn).IsNotNull();
     }
 
@@ -32,9 +34,10 @@ public class ScheduleTests : BaseTest
     {
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("throws_handler_job", []);
-        await Task.Delay(1100);
-        var job = await jobStorage.GetJobByState(jobId, JobState.Failed);
+        await WaitJobTicks(2);
+        var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
+        await Assert.That(job!.JobState).IsEqualTo(JobState.Failed);
         await Assert.That(job!.FailedOn).IsNotNull();
         await Assert.That(job!.FailedMessage).IsEqualTo("ThrowsHandlerJob throws exception");
     }
@@ -45,21 +48,21 @@ public class ScheduleTests : BaseTest
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var startAfter = DateTimeOffset.UtcNow.AddMinutes(1);
         var jobId = await JobScheduler.ScheduleJob("handler_job", [], startAfter);
-        await Task.Delay(550);
-        var jobCreated = await jobStorage.GetJobByState(jobId, JobState.Created);
+        await WaitJobTicks();
+        var jobCreated = await jobStorage.GetJobById(jobId);
         await Assert.That(jobCreated).IsNotNull();
         await Assert.That(jobCreated!.StartAfter).IsEqualTo(startAfter);
         await Assert.That(jobCreated!.JobState).IsEqualTo(JobState.Created);
 
         await JobScheduler.CancelJob(jobId);
-        var jobCancelled = await jobStorage.GetJobByState(jobId, JobState.Cancelled);
+        var jobCancelled = await jobStorage.GetJobById(jobId);
         await Assert.That(jobCancelled).IsNotNull();
         await Assert.That(jobCancelled!.StartAfter).IsEqualTo(startAfter);
         await Assert.That(jobCancelled!.CancelledOn).IsNotNull();
         await Assert.That(jobCancelled.JobState).IsEqualTo(JobState.Cancelled);
 
         await JobScheduler.ResumeJob(jobId);
-        var jobResumed = await jobStorage.GetJobByState(jobId, JobState.Created);
+        var jobResumed = await jobStorage.GetJobById(jobId);
         await Assert.That(jobResumed).IsNotNull();
         await Assert.That(jobResumed!.StartAfter).IsEqualTo(startAfter);
         await Assert.That(jobResumed!.JobState).IsEqualTo(JobState.Created);
@@ -80,7 +83,7 @@ public class ScheduleTests : BaseTest
             { "myDateOffset", DateTimeOffset.UtcNow },
             { "myDateTime", DateTime.UtcNow },
         });
-        await Task.Delay(600);
+        await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.FailedMessage).IsNullOrWhitespace();

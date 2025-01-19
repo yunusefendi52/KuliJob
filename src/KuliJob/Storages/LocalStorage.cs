@@ -140,6 +140,19 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
         }
         return Task.FromResult(q.Select(v => v.ToJobInput()));
     }
+
+    public Task<JobInput> RetryJob(string jobId, int retryDelay)
+    {
+        var jobInput = db.Find<SqliteJobInput>(jobId);
+        jobInput.JobState = JobState.Retry;
+        jobInput.RetryCount++;
+        jobInput.StartAfter = jobInput.StartAfter.AddMilliseconds(retryDelay);
+        if (db.Update(jobInput) != 1)
+        {
+            throw new ArgumentException($"Failed to retry job {jobInput.Id}");
+        }
+        return Task.FromResult(jobInput.ToJobInput());
+    }
 }
 
 internal class SqliteJobInput
@@ -162,6 +175,9 @@ internal class SqliteJobInput
     public string? FailedMessage { get; set; }
     [Indexed]
     public DateTimeOffset CreatedOn { get; set; }
+    public int RetryMaxCount { get; set; }
+    public int RetryCount { get; set; }
+    public int RetryDelayMs { get; set; }
 }
 
 internal static class JobInputMapper
@@ -181,6 +197,9 @@ internal static class JobInputMapper
             FailedOn = sqliteJobInput.FailedOn,
             FailedMessage = sqliteJobInput.FailedMessage,
             CreatedOn = sqliteJobInput.CreatedOn,
+            RetryCount = sqliteJobInput.RetryCount,
+            RetryDelayMs = sqliteJobInput.RetryDelayMs,
+            RetryMaxCount = sqliteJobInput.RetryMaxCount,
         };
     }
 
@@ -199,6 +218,9 @@ internal static class JobInputMapper
             FailedOn = jobInput.FailedOn,
             FailedMessage = jobInput.FailedMessage,
             CreatedOn = jobInput.CreatedOn,
+            RetryCount = jobInput.RetryCount,
+            RetryDelayMs = jobInput.RetryDelayMs,
+            RetryMaxCount = jobInput.RetryMaxCount,
         };
     }
 }

@@ -9,6 +9,7 @@ public class JobContext
     public required IServiceProvider Services { get; init; }
     public required string JobName { get; set; } = null!;
     public required JobDataMap JobData { get; set; } = null!;
+    public required int RetryCount { get; set; }
 }
 
 public class JobDataMap : Dictionary<string, object>
@@ -27,7 +28,7 @@ public class JobDataMap : Dictionary<string, object>
     {
         return ((JsonElement)this[key]).GetInt64();
     }
-    
+
     public double GetDouble(string key)
     {
         return ((JsonElement)this[key]).TryGetDouble(out var value) ? value : throw new ArgumentException($"Key {key} is not a double");
@@ -94,7 +95,7 @@ public class JobServerScheduler(
         cancellation.Dispose();
     }
 
-    public async Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter)
+    public async Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
         var jobData = JsonSerializer.Serialize(data);
         var jobInput = new JobInput
@@ -102,6 +103,8 @@ public class JobServerScheduler(
             JobName = jobName,
             JobData = jobData,
             StartAfter = startAfter,
+            RetryMaxCount = scheduleOptions.HasValue ? scheduleOptions.Value.RetryMaxCount : 0,
+            RetryDelayMs = scheduleOptions.HasValue ? scheduleOptions.Value.RetryDelayMs : 0,
         };
         await storage.InsertJob(jobInput);
         return jobInput.Id;
@@ -135,6 +138,7 @@ public class JobServerScheduler(
             return;
         }
 
+    RETRY:
         try
         {
             using var timeoutCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(configuration.JobTimeoutMs), timeProvider);
@@ -149,14 +153,28 @@ public class JobServerScheduler(
                 Services = sp,
                 JobName = jobInput.JobName,
                 JobData = jobDataMap!,
+                RetryCount = jobInput.RetryCount,
             };
             await jobHandler.Execute(jobContext, cts.Token);
             await storage.CompleteJobById(jobInput);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Job error {jobId} {jobName}", jobInput.Id, jobInput.JobName);
-            await storage.FailJobById(jobInput, ex.Message);
+            if (jobInput.RetryMaxCount > 0 && jobInput.RetryCount < jobInput.RetryMaxCount)
+            {
+                logger.LogError(ex, "Job error, will retry {jobId} {jobName} current retry {retryCount} max {retryMaxCount}", jobInput.Id, jobInput.JobName, jobInput.RetryCount, jobInput.RetryMaxCount);
+                var retriedJobInput = await storage.RetryJob(jobInput.Id, jobInput.RetryDelayMs);
+                if (jobInput.RetryDelayMs == 0)
+                {
+                    jobInput = retriedJobInput;
+                    goto RETRY;
+                }
+            }
+            else
+            {
+                logger.LogError(ex, "Job error {jobId} {jobName}", jobInput.Id, jobInput.JobName);
+                await storage.FailJobById(jobInput, ex.Message);
+            }
         }
     }
 
