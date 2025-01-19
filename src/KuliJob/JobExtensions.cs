@@ -20,6 +20,7 @@ public static class JobExtensions
         serviceCollection.AddSingleton<JobServerScheduler>();
         serviceCollection.AddSingleton<IJobScheduler>(sp => sp.GetRequiredService<JobServerScheduler>());
         serviceCollection.AddSingleton<JobServiceHosted>();
+        serviceCollection.AddSingleton<Serializer>();
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());
         if (!config.IsTest)
         {

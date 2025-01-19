@@ -1,0 +1,1 @@
+﻿{"string":"stringvalue","StringValue":"StringValue","int":2147483647,"long":9223372036854775807,"DoubleMax":1.7976931348623157E+308,"DoubleMin":-1.7976931348623157E+308,"Decimal":79228162514264337593543950335}

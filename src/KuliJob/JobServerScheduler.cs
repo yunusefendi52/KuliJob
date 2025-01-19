@@ -4,57 +4,6 @@ using KuliJob.Storages;
 
 namespace KuliJob;
 
-public class JobContext
-{
-    public required IServiceProvider Services { get; init; }
-    public required string JobName { get; set; } = null!;
-    public required JobDataMap JobData { get; set; } = null!;
-    public required int RetryCount { get; set; }
-}
-
-public class JobDataMap : Dictionary<string, object>
-{
-    public string GetString(string key)
-    {
-        return ((JsonElement)this[key]).GetString() ?? throw new ArgumentException($"Key {key} is not a string");
-    }
-
-    public int GetInt(string key)
-    {
-        return ((JsonElement)this[key]).GetInt32();
-    }
-
-    public long GetLong(string key)
-    {
-        return ((JsonElement)this[key]).GetInt64();
-    }
-
-    public double GetDouble(string key)
-    {
-        return ((JsonElement)this[key]).TryGetDouble(out var value) ? value : throw new ArgumentException($"Key {key} is not a double");
-    }
-
-    public DateTimeOffset GetDateTimeOffset(string key)
-    {
-        return ((JsonElement)this[key]).GetDateTimeOffset();
-    }
-
-    public DateTime GetDateTime(string key)
-    {
-        return ((JsonElement)this[key]).GetDateTime();
-    }
-
-    public bool GetBool(string key)
-    {
-        return ((JsonElement)this[key]).GetBoolean();
-    }
-
-    public T? Get<T>(string key)
-    {
-        return ((JsonElement)this[key]).Deserialize<T>();
-    }
-}
-
 public class JobConfiguration
 {
     public int Worker { get; set; } = 10;
@@ -73,7 +22,8 @@ public class JobServerScheduler(
     IServiceProvider serviceProvider,
     IJobStorage storage,
     JobConfiguration configuration,
-    [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider) : IJobScheduler, IDisposable
+    [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider,
+    Serializer serializer) : IJobScheduler, IDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 
@@ -97,7 +47,7 @@ public class JobServerScheduler(
 
     public async Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
-        var jobData = JsonSerializer.Serialize(data);
+        var jobData = serializer.Serialize(data);
         var jobInput = new JobInput
         {
             JobName = jobName,
@@ -147,7 +97,7 @@ public class JobServerScheduler(
             await using var serviceSCope = serviceProvider.CreateAsyncScope();
             var sp = serviceSCope.ServiceProvider;
             var jobHandler = sp.GetKeyedService<IJob>($"kulijob.{jobInput.JobName}") ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
-            var jobDataMap = JsonSerializer.Deserialize<JobDataMap>(jobInput.JobData);
+            var jobDataMap = serializer.Deserialize<JobDataMap>(jobInput.JobData);
             var jobContext = new JobContext
             {
                 Services = sp,
