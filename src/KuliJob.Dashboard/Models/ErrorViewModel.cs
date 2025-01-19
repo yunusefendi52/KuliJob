@@ -1,4 +1,4 @@
-namespace KuliJobWeb.Models;
+namespace KuliJob.Dashboard.Models;
 
 public class ErrorViewModel
 {

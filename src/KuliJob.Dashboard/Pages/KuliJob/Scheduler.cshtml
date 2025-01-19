@@ -1,4 +1,4 @@
-@page "{handler?}"
+@page
 @using KuliJob;
 @inject IJobScheduler jobScheduler;
 
@@ -11,6 +11,10 @@
         });
         return RedirectToPage();
     }
+}
+
+@{
+    ViewData["Title"] = "Scheduler";
 }
 
 <h3>Scheduler</h3>
