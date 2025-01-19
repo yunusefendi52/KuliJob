@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Threading.Tasks;
 using KuliJob.Storages;
 
 namespace KuliJob;
@@ -20,7 +21,7 @@ public class JobServerScheduler(
     IJobStorage storage,
     JobConfiguration configuration,
     [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider,
-    Serializer serializer) : IJobScheduler, IDisposable
+    Serializer serializer) : IJobScheduler, IAsyncDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 
@@ -36,10 +37,10 @@ public class JobServerScheduler(
         await ProcessQueueAsync(cancellation.Token);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-        cancellation.Dispose();
+        await cancellation.CancelAsync();
     }
 
     public async Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
@@ -76,15 +77,8 @@ public class JobServerScheduler(
         }
     }
 
-    private async ValueTask ProcessJob((JobInput JobInput, bool Success) value, CancellationToken cancellationToken)
+    private async ValueTask ProcessJob(JobInput jobInput, CancellationToken cancellationToken)
     {
-        var (jobInput, fetched) = value;
-        if (!fetched)
-        {
-            logger.LogError("Error update fetched job {jobId} {jobName}", jobInput.Id, jobInput.JobName);
-            return;
-        }
-
     RETRY:
         try
         {

@@ -27,7 +27,7 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
         return Task.CompletedTask;
     }
 
-    public async IAsyncEnumerable<(JobInput JobInput, bool Success)> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<JobInput> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // Need handle concurrency issue with multiple worker
         while (!cancellationToken.IsCancellationRequested)
@@ -53,11 +53,11 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
                     job.StartedOn = DateTimeOffset.UtcNow;
                     if (db.Update(job) == 1)
                     {
-                        yield return (job.ToJobInput(), true);
+                        yield return job.ToJobInput();
                     }
                     else
                     {
-                        yield return (job.ToJobInput(), false);
+                        throw new ArgumentException($"Error update fetched job {job.Id} {job.JobName}");
                     }
                 }
                 db.Commit();
@@ -111,13 +111,13 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
         return Task.CompletedTask;
     }
 
-    public Task<JobInput?> GetJobByState(string jobId, JobState jobState)
-    {
-        return Task.FromResult(db.Table<SqliteJobInput>()
-            .Where(v => v.Id == jobId && v.JobState == jobState)
-            .Select(v => v.ToJobInput())
-            .SingleOrDefault());
-    }
+    // public Task<JobInput?> GetJobByState(string jobId, JobState jobState)
+    // {
+    //     return Task.FromResult(db.Table<SqliteJobInput>()
+    //         .Where(v => v.Id == jobId && v.JobState == jobState)
+    //         .Select(v => v.ToJobInput())
+    //         .SingleOrDefault());
+    // }
 
     public Task<JobInput?> GetJobById(string jobId)
     {

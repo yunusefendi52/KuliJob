@@ -14,9 +14,9 @@ public class JobServiceHosted(JobServerScheduler jobScheduler) : BackgroundServi
         await jobScheduler.Start();
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        jobScheduler.Dispose();
-        return base.StopAsync(cancellationToken);
+        await jobScheduler.DisposeAsync();
+        await base.StopAsync(cancellationToken);
     }
 }

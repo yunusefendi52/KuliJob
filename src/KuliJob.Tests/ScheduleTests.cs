@@ -92,4 +92,26 @@ public class ScheduleTests : BaseTest
         var txt = await File.ReadAllTextAsync(txtFile);
         await Assert.That(txt).IsEqualTo("check_data_handler");
     }
+
+    [Test]
+    public async Task ShouldThrows_WhenHandlerNotRegsitered()
+    {
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var jobId = await JobScheduler.ScheduleJobNow("nonexists_handler_job", []);
+        await WaitJobTicks();
+        var job = await jobStorage.GetJobById(jobId);
+        await Assert.That(job).IsNotNull();
+        await Assert.That(job!.FailedMessage).Contains("No handler registered for job").And.Contains(job.JobName);
+    }
+
+    [Test]
+    public async Task ShouldNot_BreakLoop_WhenProcessJobsThrows()
+    {
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var jobId = await JobScheduler.ScheduleJobNow("nonexists_handler_job", []);
+        await WaitJobTicks();
+        var job = await jobStorage.GetJobById(jobId);
+        await Assert.That(job).IsNotNull();
+        await Assert.That(job!.FailedMessage).Contains("No handler registered for job").And.Contains(job.JobName);
+    }
 }

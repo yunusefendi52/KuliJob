@@ -29,7 +29,7 @@ public class CheckDataHandlerJob : IJob
 {
     public async Task Execute(JobContext context, CancellationToken cancellationToken = default)
     {
-        var txtFile = context.JobData.GetString("txtFile");
+        var txtFile = context.JobData.GetString("txtFile")!;
         context.JobData.GetBool("myBool");
         context.JobData.GetInt("myInt");
         context.JobData.GetLong("myLong");

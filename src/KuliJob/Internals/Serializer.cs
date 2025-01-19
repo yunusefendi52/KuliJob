@@ -4,7 +4,7 @@ namespace KuliJob.Internals;
 
 public class Serializer
 {
-    readonly JsonSerializerOptions jsonSerializerOptions = new(JsonSerializerDefaults.Web);
+    internal static readonly JsonSerializerOptions jsonSerializerOptions = new(JsonSerializerDefaults.Web);
 
     internal string Serialize<T>(T value)
     {
