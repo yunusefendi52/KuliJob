@@ -10,7 +10,7 @@ builder.Services.AddKuliJob(v =>
 
     v.AddKuliJob<NotifyJob>("notify_job");
 });
-builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
+// builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
 builder.AddKuliJobDashboard();
 
 var app = builder.Build();
@@ -23,8 +23,9 @@ if (!app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseAuthorization();
+app.UseStaticFiles();
 
-app.MapRazorPages();
+// app.MapRazorPages();
 app.UseKuliJobDashboard();
 
 app.Run();
