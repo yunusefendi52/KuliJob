@@ -12,9 +12,6 @@ public class JobConfiguration
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal IServiceCollection ServiceCollection { get; init; } = null!;
-
-    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    internal bool IsTest { get; set; }
 }
 
 public class JobServerScheduler(

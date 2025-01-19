@@ -22,10 +22,7 @@ public static class JobExtensions
         serviceCollection.AddSingleton<JobServiceHosted>();
         serviceCollection.AddSingleton<Serializer>();
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());
-        if (!config.IsTest)
-        {
-            serviceCollection.AddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
-        }
+        serviceCollection.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
     }
 
     public static void UseSqlite(this JobConfiguration jobConfiguration, string connectionString)
