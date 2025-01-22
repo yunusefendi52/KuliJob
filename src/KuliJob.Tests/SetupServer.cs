@@ -15,7 +15,7 @@ public static class SetupServier
             v.AddKuliJob<ThrowsHandlerJob>("throws_handler_job");
             v.AddKuliJob<CheckDataHandlerJob>("check_data_handler_job");
             v.AddKuliJob<ConditionalThrowsHandlerJob>("conditional_throws_handler_job");
-
+            // var ff = ParameterizedTestFixture.Parameters;
             v.UseSqlite(":memory:");
         });
         initServices?.Invoke(services);

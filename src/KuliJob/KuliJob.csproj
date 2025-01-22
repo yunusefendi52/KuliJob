@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="KuliJob.tests" />
+    <InternalsVisibleTo Include="KuliJob.Postgres" />
   </ItemGroup>
 
   <ItemGroup>

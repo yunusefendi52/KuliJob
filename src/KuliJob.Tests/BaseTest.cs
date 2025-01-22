@@ -1,6 +1,6 @@
 namespace KuliJob.Tests;
 
-public abstract class BaseTest
+public class BaseTest
 {
     public IServiceProvider Services { get; protected set; } = null!;
     public IJobScheduler JobScheduler { get; protected set; } = null!;
