@@ -7,6 +7,9 @@ public class RetryTests : BaseTest
     [Test]
     public async Task ShouldRetry_WithNoDelay_UntilJobNotThrows()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("conditional_throws_handler_job", new()
         {
@@ -26,6 +29,9 @@ public class RetryTests : BaseTest
     [Test]
     public async Task ShouldRetry_WithDelay_UntilJobNotThrows()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("conditional_throws_handler_job", new()
         {
@@ -46,6 +52,9 @@ public class RetryTests : BaseTest
     [Test]
     public async Task ShouldNotRetryJobWhenJobCompleted()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("handler_job", [], new()
         {
@@ -62,6 +71,9 @@ public class RetryTests : BaseTest
     [Test]
     public async Task ShouldRetry_WithDelay_WhenJobThrows_EndsWithFailed()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("conditional_throws_handler_job", new()
         {
@@ -77,7 +89,7 @@ public class RetryTests : BaseTest
         await Assert.That(job!.JobState).IsEqualTo(JobState.Retry);
         await Assert.That(job!.RetryMaxCount).IsEqualTo(2);
         await Assert.That(job!.RetryCount).IsEqualTo(2);
-        
+
         await WaitJobTicks();
         job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();

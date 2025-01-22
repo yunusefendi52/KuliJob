@@ -9,7 +9,7 @@ public class JobConfiguration
 {
     public int Worker { get; set; } = 10;
     public int MinPollingIntervalMs { get; set; } = 500;
-    public int JobTimeoutMs { get; set; } = 15_000;
+    public int JobTimeoutMs { get; set; } = 60 * 16_000;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal IServiceCollection ServiceCollection { get; init; } = null!;

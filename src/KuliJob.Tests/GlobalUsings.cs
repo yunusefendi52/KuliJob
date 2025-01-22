@@ -3,4 +3,4 @@ global using Microsoft.Extensions.DependencyInjection;
 global using Assert = TUnit.Assertions.Assert;
 global using Microsoft.Extensions.Time.Testing;
 
-[assembly: Parallelizable(ParallelScope.Fixtures)]
+[assembly: Parallelizable(ParallelScope.All)]

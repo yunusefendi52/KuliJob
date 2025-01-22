@@ -1,21 +1,27 @@
 namespace KuliJob.Tests;
 
-public static class SetupServier
+public class SetupServer : IAsyncDisposable
 {
-    public static async Task<(IServiceProvider ServiceProvider, IJobScheduler JobScheduler)> StartServerSchedulerAsync(Action<IServiceCollection>? initServices = null)
+    public ServiceProvider Services { get; private set; } = null!;
+    public IJobScheduler JobScheduler { get; private set; } = null!;
+
+    public static async Task<SetupServer> Start(
+        Action<IServiceCollection>? initServices = null,
+        Action<JobConfiguration>? config = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         services.AddKuliJob(v =>
         {
-            v.JobTimeoutMs = 450;
+            config?.Invoke(v);
+            // v.JobTimeoutMs = 450;
             v.AddKuliJob<HandlerJob>("handler_job");
             v.AddKuliJob<DelayHandlerJob>("delay_handler_job");
             v.AddKuliJob<ThrowsHandlerJob>("throws_handler_job");
             v.AddKuliJob<CheckDataHandlerJob>("check_data_handler_job");
             v.AddKuliJob<ConditionalThrowsHandlerJob>("conditional_throws_handler_job");
-            // var ff = ParameterizedTestFixture.Parameters;
+
             v.UseSqlite(":memory:");
         });
         initServices?.Invoke(services);
@@ -24,6 +30,16 @@ public static class SetupServier
         var jobScheduler = sp.GetRequiredService<IJobScheduler>();
         await jobService.StartAsync(default);
         await jobScheduler.IsStarted;
-        return (sp, jobScheduler);
+        return new()
+        {
+            Services = sp,
+            JobScheduler = jobScheduler,
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        GC.SuppressFinalize(this);
+        await Services.DisposeAsync();
     }
 }

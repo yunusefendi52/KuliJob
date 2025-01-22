@@ -7,6 +7,12 @@ public class ScheduleTests : BaseTest
     [Test]
     public async Task ShouldFailJobWhenTimedOut()
     {
+        await using var ss = await SetupServer.Start(config: v =>
+        {
+            v.JobTimeoutMs = 450;
+        });
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("delay_handler_job", []);
         await WaitJobTicks(2);
@@ -20,6 +26,9 @@ public class ScheduleTests : BaseTest
     [Test]
     public async Task ShouldCompleteJobImmediately()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("handler_job", []);
         await WaitJobTicks();
@@ -32,6 +41,9 @@ public class ScheduleTests : BaseTest
     [Test]
     public async Task ShouldFailJobWhenThrowsException()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("throws_handler_job", []);
         await WaitJobTicks(2);
@@ -45,6 +57,9 @@ public class ScheduleTests : BaseTest
     [Test]
     public async Task ShouldBeAbleToCancelAndResumeJob()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var startAfter = DateTimeOffset.UtcNow.AddMinutes(1);
         var jobId = await JobScheduler.ScheduleJob("handler_job", [], startAfter);
@@ -71,6 +86,9 @@ public class ScheduleTests : BaseTest
     [Test]
     public async Task ShouldReceiveDataInJobWhenScheduledJob()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var txtFile = Path.GetTempFileName();
         var jobId = await JobScheduler.ScheduleJobNow("check_data_handler_job", new()
@@ -96,6 +114,9 @@ public class ScheduleTests : BaseTest
     [Test]
     public async Task ShouldThrows_WhenHandlerNotRegsitered()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("nonexists_handler_job", []);
         await WaitJobTicks();
@@ -107,6 +128,9 @@ public class ScheduleTests : BaseTest
     [Test]
     public async Task ShouldNot_BreakLoop_WhenProcessJobsThrows()
     {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.ScheduleJobNow("nonexists_handler_job", []);
         await WaitJobTicks();

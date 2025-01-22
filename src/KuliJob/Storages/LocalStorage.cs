@@ -38,7 +38,8 @@ internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("
                 db.BeginTransaction();
                 var jobs = db
                     .Table<SqliteJobInput>()
-                    .OrderByDescending(v => v.CreatedOn)
+                    .OrderBy(v => v.CreatedOn)
+                    .ThenBy(v => v.Id)
                     .Where(v => v.JobState < JobState.Active && v.StartAfter < DateTimeOffset.UtcNow)
                     .Take(configuration.Worker)
                     .ToArray();
