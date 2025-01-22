@@ -12,7 +12,8 @@ public class DelayHandlerJob : IJob
 {
     public async Task Execute(JobContext context, CancellationToken cancellationToken = default)
     {
-        await Task.Delay(500, cancellationToken);
+        var delay = context.JobData.ContainsKey("delay") ? context.JobData.GetInt("delay") : 500;
+        await Task.Delay(delay, cancellationToken);
     }
 }
 
