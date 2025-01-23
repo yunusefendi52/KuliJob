@@ -14,6 +14,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: ikalnytskyi/action-setup-postgres@v7
+      with:
+        username: postgres
+        password: postgres
+        port: 5432
+        postgres-version: "15"
+      id: postgres
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
