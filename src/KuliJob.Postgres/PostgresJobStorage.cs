@@ -83,8 +83,9 @@ internal class PostgresJobStorage(
         set failed_on = now(),
             state = '{(int)JobState.Failed}',
             failed_message = @failedMessage
-        where id = @id
+        where id = @id::uuid
             and state = '{(int)JobState.Active}'
+        returning 1
         """, new
         {
             id = jobInput.Id,
@@ -143,9 +144,22 @@ internal class PostgresJobStorage(
         return jobInput;
     }
 
-    public Task<IEnumerable<JobInput>> GetLatestJobs(int page, int limit, JobState? jobState = null)
+    public async Task<IEnumerable<JobInput>> GetLatestJobs(int page, int limit, JobState? jobState = null)
     {
-        throw new NotImplementedException();
+        await using var conn = await dataSource.OpenConnectionAsync();
+        var results = await conn.QueryAsync<PostgresJobInput>($"""
+        select * from {schema}.job
+        {(jobState is not null ? "where state = @jobState" : null)}
+        order by started_on desc
+        limit @limit
+        offset @offset
+        """, new
+        {
+            limit,
+            offset = (page - 1) * limit,
+            jobState = jobState is null ? (short?)null : (short)jobState,
+        });
+        return results.Select(v => v.ToJobInput());
     }
 
     public async Task InsertJob(JobInput jobInput)

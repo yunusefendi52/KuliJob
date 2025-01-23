@@ -90,6 +90,74 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(() => jobStorage.GetJobById(jobId)).ThrowsNothing();
         await Assert.That(() => jobStorage.GetJobById(jobId)).IsNotNull();
         await Assert.That(() => jobStorage.GetJobById(jobId).ContinueWith(v => v.Result!.Id)).IsEqualTo(jobId);
+        var jobData = serializer.Serialize(("Data1", 1.0));
+        var jobWithData = await Assert.That(async () =>
+        {
+            var job = new JobInput()
+            {
+                JobName = "job",
+                JobData = jobData,
+                StartAfter = startAfter,
+            };
+            await jobStorage.InsertJob(job);
+            return job;
+        }).ThrowsNothing();
+        await Assert.That(jobWithData).IsNotNull();
+        await Assert.That(jobWithData!.JobData).IsEqualTo(jobData);
+    }
+
+    [Test]
+    public async Task Can_Get_Job()
+    {
+        await using var postgresStart = new PostgresStart(dbConnString);
+        var connString = await postgresStart.Start();
+        var services = new ServiceCollection();
+        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
+        var config = new JobConfiguration
+        {
+            ServiceCollection = services,
+        };
+        config.UsePostgreSQL(connString);
+        services.AddLogging();
+        services.AddSingleton(_ => config);
+        var sp = services.BuildServiceProvider();
+        var jobStorage = sp.GetRequiredService<IJobStorage>();
+        await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
+        var startAfter = DateTimeOffset.UtcNow;
+        var insertJob = await Assert.That(async () =>
+        {
+            var job = new JobInput()
+            {
+                JobName = "job",
+                StartAfter = startAfter,
+            }; ;
+            await jobStorage.InsertJob(job);
+            return job;
+        }).ThrowsNothing();
+        var theJob = await Assert.That(() => jobStorage.GetJobById(insertJob!.Id)).ThrowsNothing();
+        await Assert.That(insertJob!.Id).IsEqualTo(insertJob.Id);
+        await Assert.That(insertJob!.CreatedOn).IsEqualTo(insertJob.CreatedOn);
+        await Assert.That(insertJob.StartAfter).IsEqualTo(insertJob.StartAfter);
+    }
+
+    [Test]
+    public async Task Should_Return_Null_When_No_Job()
+    {
+        await using var postgresStart = new PostgresStart(dbConnString);
+        var connString = await postgresStart.Start();
+        var services = new ServiceCollection();
+        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
+        var config = new JobConfiguration
+        {
+            ServiceCollection = services,
+        };
+        config.UsePostgreSQL(connString);
+        services.AddLogging();
+        services.AddSingleton(_ => config);
+        var sp = services.BuildServiceProvider();
+        var jobStorage = sp.GetRequiredService<IJobStorage>();
+        await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
+        await Assert.That(() => jobStorage.GetJobById("2d212fa9-4b15-45fe-a65c-22de0b6b25ef")).IsNull();
     }
 
     [Test]
@@ -207,12 +275,12 @@ public class PostgresJobStorageTests : BaseTest
             jobId = job.Id;
             return jobStorage.InsertJob(job);
         }).ThrowsNothing();
-        var completedJob = await jobStorage.GetJobById(jobId);
-        await Assert.That(() => jobStorage.CompleteJobById(completedJob!)).ThrowsNothing();
-        completedJob = await jobStorage.GetJobById(jobId);
-        await Assert.That(completedJob!.JobState).IsEqualTo(JobState.Completed);
-        await Assert.That(completedJob!.CompletedOn).IsNotNull();
-        await Assert.That(() => jobStorage.CancelJobById(jobId)).ThrowsException();
+        var theJob = await jobStorage.GetJobById(jobId);
+        await Assert.That(() => jobStorage.FailJobById(theJob!, "reason msg")).ThrowsNothing();
+        theJob = await jobStorage.GetJobById(jobId);
+        await Assert.That(theJob!.JobState).IsEqualTo(JobState.Failed);
+        await Assert.That(theJob!.FailedMessage).IsEqualTo("reason msg");
+        await Assert.That(() => jobStorage.FailJobById(theJob, "reason msg")).ThrowsException();
     }
 
     [Test]
@@ -377,6 +445,43 @@ public class PostgresJobStorageTests : BaseTest
         var deltaRetryTime = retryTime - retriedJob.StartAfter;
         await Assert.That(deltaRetryTime.TotalMilliseconds).IsLessThan(25);
         await Assert.That(() => jobStorage.RetryJob(jobId, 250)).ThrowsException();
+    }
+
+    [Test]
+    public async Task Can_Fetch_Latest_Job()
+    {
+        await using var postgresStart = new PostgresStart(dbConnString);
+        var connString = await postgresStart.Start();
+        var services = new ServiceCollection();
+        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
+        var config = new JobConfiguration
+        {
+            ServiceCollection = services,
+        };
+        config.UsePostgreSQL(connString);
+        services.AddLogging();
+        services.AddSingleton(_ => config);
+        var sp = services.BuildServiceProvider();
+        var jobStorage = sp.GetRequiredService<IJobStorage>();
+        await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
+        await Assert.That(() => jobStorage.GetLatestJobs(1, 15)).IsEmpty();
+        var startAfter = DateTimeOffset.UtcNow;
+        await Assert.That(async () =>
+        {
+            await jobStorage.InsertJob(new JobInput()
+            {
+                JobName = "job",
+                StartAfter = startAfter,
+            });
+            await jobStorage.InsertJob(new JobInput()
+            {
+                JobName = "job",
+                JobState = JobState.Active,
+                StartAfter = startAfter,
+            });
+        }).ThrowsNothing();
+        await Assert.That(() => jobStorage.GetLatestJobs(1, 15)).HasCount().EqualTo(2);
+        await Assert.That(() => jobStorage.GetLatestJobs(1, 15, JobState.Active)).HasCount().EqualTo(1);
     }
 }
 

@@ -1,0 +1,1 @@
+﻿{"id":"243ff325-c566-4a70-ba85-653b35656ab2","jobName":"job","jobData":null,"jobState":0,"startAfter":"2025-01-23T20:43:54+00:00","startedOn":null,"completedOn":null,"cancelledOn":null,"failedOn":null,"failedMessage":null,"createdOn":"2025-01-23T21:02:02.228112+00:00","retryMaxCount":0,"retryCount":0,"retryDelayMs":0}
