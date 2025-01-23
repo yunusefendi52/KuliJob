@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Dapper;
 using KuliJob.Storages;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,17 +23,17 @@ internal class PostgresJobStorage(
             id uuid not null,
             name text not null,
             data jsonb,
-            state integer not null default(0),
-            retry_max_count integer not null default(0),
-            retry_count integer not null default(0),
-            retry_delay integer not null default(0),
-            start_after timestamp with time zone not null default now(),
+            state smallint not null default(0),
+            retry_max_count smallint not null default(0),
+            retry_count smallint not null default(0),
+            retry_delay smallint not null default(0),
+            start_after timestamp with time zone not null,
             started_on timestamp with time zone,
             completed_on timestamp with time zone,
             cancelled_on timestamp with time zone,
             failed_on timestamp with time zone,
             failed_message text,
-            created_on timestamp with time zone not null default now()
+            created_on timestamp with time zone not null
         );
         create index if not exists job_name_idx on {schema}.job (name);
         create index if not exists job_name_id_idx on {schema}.job (name, id);
@@ -49,7 +50,7 @@ internal class PostgresJobStorage(
         update {schema}.job
         set cancelled_on = now(),
             state = '{(int)JobState.Cancelled}'
-        where id = @id
+        where id = @id::uuid
             and state < '{(int)JobState.Completed}'
         returning 1
         """, new
@@ -65,7 +66,7 @@ internal class PostgresJobStorage(
         update {schema}.job
         set completed_on = now(),
             state = '{(int)JobState.Completed}'
-        where id = @id
+        where id = @id::uuid
             and state = '{(int)JobState.Active}'
         returning 1
         """, new
@@ -96,10 +97,8 @@ internal class PostgresJobStorage(
         while (!cancellationToken.IsCancellationRequested)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
-            while (true)
-            {
-                await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
-                var results = await conn.QueryAsync<PostgresJobInput>($"""
+            await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
+            var results = await conn.QueryAsync<PostgresJobInput>($"""
                 with locked_job as (
                     select id from {schema}.job
                     where state < '{(int)JobState.Active}'
@@ -108,7 +107,7 @@ internal class PostgresJobStorage(
                     limit @limit
                     for update skip locked
                 )
-                update ${schema}.job job
+                update {schema}.job job
                 set
                     state = '{(int)JobState.Active}',
                     started_on = now()
@@ -116,16 +115,15 @@ internal class PostgresJobStorage(
                 where job.id = locked_job.id
                 returning job.*
                 """, new
+            {
+                limit = configuration.Worker,
+            });
+            if (results != null)
+            {
+                foreach (var item in results)
                 {
-                    limit = configuration.Worker,
-                });
-                if (results != null)
-                {
-                    foreach (var item in results)
-                    {
-                        var jobInput = item.ToJobInput();
-                        yield return jobInput;
-                    }
+                    var jobInput = item.ToJobInput();
+                    yield return jobInput;
                 }
             }
         }
@@ -136,7 +134,7 @@ internal class PostgresJobStorage(
         await using var conn = await dataSource.OpenConnectionAsync();
         var result = await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
         select * from {schema}.job
-        where id = @id
+        where id = @id::uuid
         """, new
         {
             id = jobId,
@@ -152,27 +150,31 @@ internal class PostgresJobStorage(
 
     public async Task InsertJob(JobInput jobInput)
     {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        await conn.QuerySingleAsync($"""
+        var commandText = $"""
         insert into {schema}.job (
             id,
             name,
             data,
+            state,
             retry_max_count,
             retry_count,
-            retry_delay
+            retry_delay,
+            start_after,
+            created_on
         )
-        values (@id, @name, @data, @retry_max_count, @retry_count, @retry_delay)
-        returning 1
-        """, new
-        {
-            id = jobInput.Id,
-            name = jobInput.JobName,
-            data = jobInput.JobData,
-            retry_max_count = jobInput.RetryMaxCount,
-            retry_count = jobInput.RetryCount,
-            retry_delay = jobInput.RetryDelayMs,
-        });
+        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on)
+        """;
+        await using var command = dataSource.CreateCommand(commandText);
+        command.Parameters.AddWithValue("@id", Guid.Parse(jobInput.Id));
+        command.Parameters.AddWithValue("@name", jobInput.JobName);
+        command.Parameters.AddWithValue("@data", NpgsqlTypes.NpgsqlDbType.Jsonb, jobInput.JobData == null ? DBNull.Value : jobInput.JobData);
+        command.Parameters.AddWithValue("@state", (short)jobInput.JobState);
+        command.Parameters.AddWithValue("@retry_max_count", jobInput.RetryMaxCount);
+        command.Parameters.AddWithValue("@retry_count", jobInput.RetryCount);
+        command.Parameters.AddWithValue("@retry_delay", jobInput.RetryDelayMs);
+        command.Parameters.AddWithValue("@start_after", jobInput.StartAfter);
+        command.Parameters.AddWithValue("@created_on", jobInput.CreatedOn);
+        var rows = await command.ExecuteNonQueryAsync();
     }
 
     public async Task ResumeJob(string jobId)
@@ -182,7 +184,7 @@ internal class PostgresJobStorage(
         update {schema}.job
         set completed_on = null,
             state = '{(int)JobState.Created}'
-        where id = @id
+        where id = @id::uuid
             and state = '{(int)JobState.Cancelled}'
         returning 1
         """, new
@@ -197,10 +199,11 @@ internal class PostgresJobStorage(
         var result = await conn.QuerySingleAsync<PostgresJobInput>($"""
         update {schema}.job
         set completed_on = null,
-            state = '{(int)JobState.Created}'
-        where id = @id
+            state = '{(int)JobState.Retry}',
+            start_after = start_after + ({retryDelay} * interval '1 ms')
+        where id = @id::uuid
             and state = '{(int)JobState.Cancelled}'
-        returning 1
+        returning *
         """, new
         {
             id = jobId,
@@ -211,7 +214,7 @@ internal class PostgresJobStorage(
 
 internal class PostgresJobInput
 {
-    public string id { get; set; } = Guid.NewGuid().ToString();
+    public Guid id { get; set; }
     public string name { get; set; } = null!;
     public string data { get; set; } = null!;
     public JobState state { get; set; }
@@ -230,7 +233,7 @@ internal class PostgresJobInput
     {
         return new()
         {
-            Id = id,
+            Id = id.ToString(),
             JobName = name,
             JobState = state,
             JobData = data,
