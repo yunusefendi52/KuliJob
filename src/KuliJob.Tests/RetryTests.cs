@@ -83,15 +83,15 @@ public class RetryTests : BaseTest
             RetryDelayMs = 500,
             RetryMaxCount = 2,
         });
-        await WaitJobTicks(2);
+        await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.FailedMessage).IsNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Retry);
         await Assert.That(job!.RetryMaxCount).IsEqualTo(2);
-        await Assert.That(job!.RetryCount).IsEqualTo(2);
+        await Assert.That(job!.RetryCount).IsEqualTo(1);
 
-        await WaitJobTicks();
+        await WaitJobTicks(2);
         job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Failed);

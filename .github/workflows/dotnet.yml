@@ -14,13 +14,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: ikalnytskyi/action-setup-postgres@v7
-      with:
-        username: postgres
-        password: postgres
-        port: 5432
-        postgres-version: "15"
-      id: postgres
+    - name: Run PostgreSQL
+      run: |
+        docker pull postgres:15
+        docker run -d \
+          --name postgres-container \
+          -e POSTGRES_USER=postgres \
+          -e POSTGRES_PASSWORD=postgres \
+          -p 5432:5432 \
+          postgres:15
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
