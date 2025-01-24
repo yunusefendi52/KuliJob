@@ -7,7 +7,7 @@ namespace KuliJob;
 
 public class JobConfiguration
 {
-    public int Worker { get; set; } = 10;
+    public int Worker { get; set; } = Environment.ProcessorCount * 2;
     public int MinPollingIntervalMs { get; set; } = 500;
     public int JobTimeoutMs { get; set; } = 60 * 16_000;
 

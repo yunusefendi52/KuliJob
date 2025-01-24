@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KuliJob\KuliJob.csproj" />
     <ProjectReference Include="..\KuliJob.Dashboard\KuliJob.Dashboard.csproj" />
+    <ProjectReference Include="..\KuliJob.Postgres\KuliJob.Postgres.csproj" />
   </ItemGroup>
 
 </Project>
