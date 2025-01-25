@@ -10,7 +10,7 @@
     [FromQuery(Name = "job-state")]
     public string? FilterJobState { get; set; }
 
-    public IEnumerable<KuliJob.JobInput>? Jobs { get; set; }
+    public IEnumerable<KuliJob.Job>? Jobs { get; set; }
 
     public async Task OnGetAsync()
     {
