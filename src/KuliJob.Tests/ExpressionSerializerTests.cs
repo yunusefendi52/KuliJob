@@ -143,7 +143,6 @@ internal class MyService : IMyService
 {
     public async Task MyMethod()
     {
-        await Console.Out.WriteLineAsync("MyMethod service");
     }
 
     public async Task MyMethodArgs(string value)
