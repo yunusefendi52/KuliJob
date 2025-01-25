@@ -79,7 +79,7 @@ public class PostgresJobStorageTests : BaseTest
         string jobId = "";
         await Assert.That(() =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 StartAfter = startAfter,
@@ -93,7 +93,7 @@ public class PostgresJobStorageTests : BaseTest
         var jobData = serializer.Serialize(("Data1", 1.0));
         var jobWithData = await Assert.That(async () =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 JobData = jobData,
@@ -126,7 +126,7 @@ public class PostgresJobStorageTests : BaseTest
         var startAfter = DateTimeOffset.UtcNow;
         var insertJob = await Assert.That(async () =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 StartAfter = startAfter,
@@ -181,7 +181,7 @@ public class PostgresJobStorageTests : BaseTest
         var jobId = "";
         await Assert.That(() =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 StartAfter = startAfter,
@@ -195,7 +195,7 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(cancelledJob!.CancelledOn).IsNotNull();
         await Assert.That(() =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 JobState = JobState.Completed,
@@ -228,7 +228,7 @@ public class PostgresJobStorageTests : BaseTest
         var jobId = "";
         await Assert.That(() =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 JobState = JobState.Active,
@@ -266,7 +266,7 @@ public class PostgresJobStorageTests : BaseTest
         var jobId = "";
         await Assert.That(() =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 JobState = JobState.Active,
@@ -328,7 +328,7 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         await Parallel.ForEachAsync(Enumerable.Range(0, worker * 2), async (v, c) =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = $"job {v}",
                 StartAfter = DateTimeOffset.UtcNow.AddMilliseconds(-500),
@@ -336,7 +336,7 @@ public class PostgresJobStorageTests : BaseTest
             await jobStorage.InsertJob(job);
         });
         var count = 0;
-        var results = new List<JobInput>();
+        var results = new List<Job>();
         await foreach (var item in jobStorage.FetchNextJob())
         {
             results.Add(item);
@@ -389,7 +389,7 @@ public class PostgresJobStorageTests : BaseTest
         var jobId = "";
         await Assert.That(() =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 JobState = JobState.Cancelled,
@@ -426,7 +426,7 @@ public class PostgresJobStorageTests : BaseTest
         var jobId = "";
         await Assert.That(() =>
         {
-            var job = new JobInput()
+            var job = new Job()
             {
                 JobName = "job",
                 JobState = JobState.Cancelled,
@@ -468,12 +468,12 @@ public class PostgresJobStorageTests : BaseTest
         var startAfter = DateTimeOffset.UtcNow;
         await Assert.That(async () =>
         {
-            await jobStorage.InsertJob(new JobInput()
+            await jobStorage.InsertJob(new Job()
             {
                 JobName = "job",
                 StartAfter = startAfter,
             });
-            await jobStorage.InsertJob(new JobInput()
+            await jobStorage.InsertJob(new Job()
             {
                 JobName = "job",
                 JobState = JobState.Active,

@@ -47,7 +47,7 @@ public class JobServerScheduler(
     public async Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
         var jobData = serializer.Serialize(data);
-        var jobInput = new JobInput
+        var jobInput = new Job
         {
             JobName = jobName,
             JobData = jobData,
@@ -78,7 +78,7 @@ public class JobServerScheduler(
         }
     }
 
-    private async ValueTask ProcessJob(JobInput jobInput, CancellationToken cancellationToken)
+    private async ValueTask ProcessJob(Job jobInput, CancellationToken cancellationToken)
     {
     RETRY:
         try

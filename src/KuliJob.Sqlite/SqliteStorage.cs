@@ -20,7 +20,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         return Task.CompletedTask;
     }
 
-    public Task InsertJob(JobInput jobInput)
+    public Task InsertJob(Job jobInput)
     {
         if (db.Insert(jobInput.ToSqliteJobInput()) != 1)
         {
@@ -29,7 +29,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         return Task.CompletedTask;
     }
 
-    public async IAsyncEnumerable<JobInput> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<Job> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // Need handle concurrency issue with multiple worker
         while (!cancellationToken.IsCancellationRequested)
@@ -124,7 +124,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
     //         .SingleOrDefault());
     // }
 
-    public Task<JobInput?> GetJobById(string jobId)
+    public Task<Job?> GetJobById(string jobId)
     {
         return Task.FromResult(db.Table<SqliteJobInput>()
             .Where(v => v.Id == jobId)
@@ -132,7 +132,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
             .SingleOrDefault());
     }
 
-    public Task<IEnumerable<JobInput>> GetLatestJobs(int page, int limit, JobState? jobState = null)
+    public Task<IEnumerable<Job>> GetLatestJobs(int page, int limit, JobState? jobState = null)
     {
         var offset = (page - 1) * limit;
         var q = db.Table<SqliteJobInput>()
@@ -146,7 +146,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         return Task.FromResult(q.Select(v => v.ToJobInput()));
     }
 
-    public Task<JobInput> RetryJob(string jobId, int retryDelay)
+    public Task<Job> RetryJob(string jobId, int retryDelay)
     {
         var jobInput = db.Find<SqliteJobInput>(jobId);
         jobInput.JobState = JobState.Retry;
@@ -187,9 +187,9 @@ internal class SqliteJobInput
 
 internal static class JobInputMapper
 {
-    public static JobInput ToJobInput(this SqliteJobInput sqliteJobInput)
+    public static Job ToJobInput(this SqliteJobInput sqliteJobInput)
     {
-        return new JobInput
+        return new Job
         {
             Id = sqliteJobInput.Id,
             JobName = sqliteJobInput.JobName,
@@ -208,7 +208,7 @@ internal static class JobInputMapper
         };
     }
 
-    public static SqliteJobInput ToSqliteJobInput(this JobInput jobInput)
+    public static SqliteJobInput ToSqliteJobInput(this Job jobInput)
     {
         return new SqliteJobInput
         {

@@ -93,7 +93,7 @@ internal class PostgresJobStorage(
         });
     }
 
-    public async IAsyncEnumerable<JobInput> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<Job> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -130,7 +130,7 @@ internal class PostgresJobStorage(
         }
     }
 
-    public async Task<JobInput?> GetJobById(string jobId)
+    public async Task<Job?> GetJobById(string jobId)
     {
         await using var conn = await dataSource.OpenConnectionAsync();
         var result = await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
@@ -144,7 +144,7 @@ internal class PostgresJobStorage(
         return jobInput;
     }
 
-    public async Task<IEnumerable<JobInput>> GetLatestJobs(int page, int limit, JobState? jobState = null)
+    public async Task<IEnumerable<Job>> GetLatestJobs(int page, int limit, JobState? jobState = null)
     {
         await using var conn = await dataSource.OpenConnectionAsync();
         var results = await conn.QueryAsync<PostgresJobInput>($"""
@@ -162,7 +162,7 @@ internal class PostgresJobStorage(
         return results.Select(v => v.ToJobInput());
     }
 
-    public async Task InsertJob(JobInput jobInput)
+    public async Task InsertJob(Job jobInput)
     {
         var commandText = $"""
         insert into {schema}.job (
@@ -207,7 +207,7 @@ internal class PostgresJobStorage(
         });
     }
 
-    public async Task<JobInput> RetryJob(string jobId, int retryDelay)
+    public async Task<Job> RetryJob(string jobId, int retryDelay)
     {
         await using var conn = await dataSource.OpenConnectionAsync();
         var result = await conn.QuerySingleAsync<PostgresJobInput>($"""
@@ -243,7 +243,7 @@ internal class PostgresJobInput
     public int retry_count { get; set; }
     public int retry_delay { get; set; }
 
-    public JobInput ToJobInput()
+    public Job ToJobInput()
     {
         return new()
         {

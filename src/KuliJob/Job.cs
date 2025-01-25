@@ -10,9 +10,9 @@ public enum JobState
     Failed,
 }
 
-public class JobInput
+public class Job
 {
-    public JobInput()
+    public Job()
     {
         var now = DateTimeOffset.UtcNow;
         StartAfter = now;
