@@ -30,7 +30,7 @@ public class Job
     public DateTimeOffset? FailedOn { get; set; }
     public string? FailedMessage { get; set; }
     public DateTimeOffset CreatedOn { get; set; }
-    public int RetryMaxCount { get; set; }
+    public int RetryMaxCount { get; set; } = 2;
     public int RetryCount { get; set; }
     public int RetryDelayMs { get; set; }
 }
