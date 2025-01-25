@@ -36,6 +36,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KuliJob\KuliJob.csproj" />
     <ProjectReference Include="..\KuliJob.Postgres\KuliJob.Postgres.csproj" />
+    <ProjectReference Include="..\KuliJob.Sqlite\KuliJob.Sqlite.csproj" />
   </ItemGroup>
 
   <Target Name="GenerateHtmlCoverageReport" AfterTargets="GenerateCoverageResultAfterTest">

@@ -1,9 +1,11 @@
 using System.Runtime.CompilerServices;
+using KuliJob.Storages;
+using Microsoft.Extensions.DependencyInjection;
 using SQLite;
 
-namespace KuliJob.Storages;
+namespace KuliJob.Sqlite;
 
-internal class LocalStorage(JobConfiguration configuration, [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider) : IJobStorage
+internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider) : IJobStorage
 {
     SQLiteConnection db = null!;
 
