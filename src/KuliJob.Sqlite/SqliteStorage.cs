@@ -68,11 +68,12 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         }
     }
 
-    public Task CompleteJobById(JobInput jobInput)
+    public Task CompleteJobById(string jobId)
     {
+        var jobInput = db.Find<SqliteJobInput>(jobId);
         jobInput.JobState = JobState.Completed;
         jobInput.CompletedOn = DateTimeOffset.UtcNow;
-        if (db.Update(jobInput.ToSqliteJobInput()) != 1)
+        if (db.Update(jobInput) != 1)
         {
             throw new ArgumentException($"Failed complete job {jobInput.Id}");
         }
@@ -91,12 +92,13 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         return Task.CompletedTask;
     }
 
-    public Task FailJobById(JobInput jobInput, string failedMessage)
+    public Task FailJobById(string jobId, string failedMessage)
     {
+        var jobInput = db.Find<SqliteJobInput>(jobId);
         jobInput.JobState = JobState.Failed;
         jobInput.FailedOn = DateTimeOffset.UtcNow;
         jobInput.FailedMessage = failedMessage;
-        if (db.Update(jobInput.ToSqliteJobInput()) != 1)
+        if (db.Update(jobInput) != 1)
         {
             throw new ArgumentException($"Failed fail job {jobInput.Id}");
         }

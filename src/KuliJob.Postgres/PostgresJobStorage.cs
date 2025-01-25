@@ -59,7 +59,7 @@ internal class PostgresJobStorage(
         });
     }
 
-    public async Task CompleteJobById(JobInput jobInput)
+    public async Task CompleteJobById(string jobId)
     {
         await using var conn = await dataSource.OpenConnectionAsync();
         await conn.QuerySingleAsync($"""
@@ -71,11 +71,11 @@ internal class PostgresJobStorage(
         returning 1
         """, new
         {
-            id = jobInput.Id,
+            id = jobId,
         });
     }
 
-    public async Task FailJobById(JobInput jobInput, string failedMessage)
+    public async Task FailJobById(string jobId, string failedMessage)
     {
         await using var conn = await dataSource.OpenConnectionAsync();
         await conn.QuerySingleAsync($"""
@@ -88,7 +88,7 @@ internal class PostgresJobStorage(
         returning 1
         """, new
         {
-            id = jobInput.Id,
+            id = jobId,
             failedMessage,
         });
     }

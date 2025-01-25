@@ -6,8 +6,8 @@ public interface IJobStorage
     Task<JobInput?> GetJobById(string jobId);
     Task<IEnumerable<JobInput>> GetLatestJobs(int page, int limit, JobState? jobState = null);
     Task CancelJobById(string jobId);
-    Task CompleteJobById(JobInput jobInput);
-    Task FailJobById(JobInput jobInput, string failedMessage);
+    Task CompleteJobById(string jobId);
+    Task FailJobById(string jobId, string failedMessage);
     IAsyncEnumerable<JobInput> FetchNextJob(CancellationToken cancellationToken = default);
     Task InsertJob(JobInput jobInput);
     Task StartStorage();

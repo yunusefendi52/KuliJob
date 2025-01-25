@@ -238,7 +238,7 @@ public class PostgresJobStorageTests : BaseTest
             return jobStorage.InsertJob(job);
         }).ThrowsNothing();
         var completedJob = await jobStorage.GetJobById(jobId);
-        await Assert.That(() => jobStorage.CompleteJobById(completedJob!)).ThrowsNothing();
+        await Assert.That(() => jobStorage.CompleteJobById(completedJob!.Id)).ThrowsNothing();
         completedJob = await jobStorage.GetJobById(jobId);
         await Assert.That(completedJob!.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(completedJob!.CompletedOn).IsNotNull();
@@ -276,11 +276,11 @@ public class PostgresJobStorageTests : BaseTest
             return jobStorage.InsertJob(job);
         }).ThrowsNothing();
         var theJob = await jobStorage.GetJobById(jobId);
-        await Assert.That(() => jobStorage.FailJobById(theJob!, "reason msg")).ThrowsNothing();
+        await Assert.That(() => jobStorage.FailJobById(theJob!.Id, "reason msg")).ThrowsNothing();
         theJob = await jobStorage.GetJobById(jobId);
         await Assert.That(theJob!.JobState).IsEqualTo(JobState.Failed);
         await Assert.That(theJob!.FailedMessage).IsEqualTo("reason msg");
-        await Assert.That(() => jobStorage.FailJobById(theJob, "reason msg")).ThrowsException();
+        await Assert.That(() => jobStorage.FailJobById(theJob.Id, "reason msg")).ThrowsException();
     }
 
     [Test]

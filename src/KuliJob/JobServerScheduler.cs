@@ -98,7 +98,7 @@ public class JobServerScheduler(
                 RetryCount = jobInput.RetryCount,
             };
             await jobHandler.Execute(jobContext, cts.Token);
-            await storage.CompleteJobById(jobInput);
+            await storage.CompleteJobById(jobInput.Id);
         }
         catch (Exception ex)
         {
@@ -115,7 +115,7 @@ public class JobServerScheduler(
             else
             {
                 logger.LogError(ex, "Job error {jobId} {jobName}", jobInput.Id, jobInput.JobName);
-                await storage.FailJobById(jobInput, ex.Message);
+                await storage.FailJobById(jobInput.Id, ex.Message);
             }
         }
     }
