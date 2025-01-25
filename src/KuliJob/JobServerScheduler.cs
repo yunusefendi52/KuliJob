@@ -54,6 +54,7 @@ public class JobServerScheduler(
             StartAfter = startAfter,
             RetryMaxCount = scheduleOptions.HasValue ? scheduleOptions.Value.RetryMaxCount : 0,
             RetryDelayMs = scheduleOptions.HasValue ? scheduleOptions.Value.RetryDelayMs : 0,
+            Priority = scheduleOptions.HasValue ? scheduleOptions.Value.Priority : 0,
         };
         await storage.InsertJob(jobInput);
         return jobInput.Id;

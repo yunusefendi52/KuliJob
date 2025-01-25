@@ -33,4 +33,5 @@ public class Job
     public int RetryMaxCount { get; set; } = 2;
     public int RetryCount { get; set; }
     public int RetryDelayMs { get; set; }
+    public int Priority { get; set; }
 }

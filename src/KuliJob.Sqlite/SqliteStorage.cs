@@ -40,7 +40,8 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
                 db.BeginTransaction();
                 var jobs = db
                     .Table<SqliteJobInput>()
-                    .OrderBy(v => v.CreatedOn)
+                    .OrderBy(v => v.Priority)
+                    .ThenBy(v => v.CreatedOn)
                     .ThenBy(v => v.Id)
                     .Where(v => v.JobState < JobState.Active && v.StartAfter < DateTimeOffset.UtcNow)
                     .Take(configuration.Worker)
@@ -183,6 +184,7 @@ internal class SqliteJobInput
     public int RetryMaxCount { get; set; }
     public int RetryCount { get; set; }
     public int RetryDelayMs { get; set; }
+    public int Priority { get; set; }
 }
 
 internal static class JobInputMapper
@@ -205,6 +207,7 @@ internal static class JobInputMapper
             RetryCount = sqliteJobInput.RetryCount,
             RetryDelayMs = sqliteJobInput.RetryDelayMs,
             RetryMaxCount = sqliteJobInput.RetryMaxCount,
+            Priority = sqliteJobInput.Priority,
         };
     }
 
@@ -226,6 +229,7 @@ internal static class JobInputMapper
             RetryCount = jobInput.RetryCount,
             RetryDelayMs = jobInput.RetryDelayMs,
             RetryMaxCount = jobInput.RetryMaxCount,
+            Priority = jobInput.Priority,
         };
     }
 }

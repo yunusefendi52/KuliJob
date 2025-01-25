@@ -39,6 +39,8 @@ internal class PostgresJobStorage(
         create index if not exists job_name_id_idx on {schema}.job (name, id);
         create index if not exists job_created_on_id_idx on {schema}.job (created_on, id);
         create index if not exists job_name_state_start_after_idx on {schema}.job (name, state, start_after);
+        alter table {schema}.job add if not exists priority smallint not null default(0);
+        create index if not exists job_priority_created_on_id_idx on {schema}.job (priority, created_on, id);
         commit;
         """);
     }
@@ -104,7 +106,7 @@ internal class PostgresJobStorage(
                     select id from {schema}.job
                     where state < '{(int)JobState.Active}'
                         and start_after < now()
-                    order by created_on desc, id
+                    order by priority, created_on, id
                     limit @limit
                     for update skip locked
                 )
@@ -242,6 +244,7 @@ internal class PostgresJobInput
     public int retry_max_count { get; set; }
     public int retry_count { get; set; }
     public int retry_delay { get; set; }
+    public short priority { get; set; }
 
     public Job ToJobInput()
     {
@@ -261,6 +264,7 @@ internal class PostgresJobInput
             RetryMaxCount = retry_max_count,
             StartAfter = start_after,
             StartedOn = started_on,
+            Priority = priority,
         };
     }
 }
