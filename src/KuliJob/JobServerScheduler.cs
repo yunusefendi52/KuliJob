@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Threading.Tasks;
 using KuliJob.Storages;
@@ -127,5 +128,50 @@ public class JobServerScheduler(
     public async Task ResumeJob(string jobId)
     {
         await storage.ResumeJob(jobId);
+    }
+
+    public async Task<string> ScheduleJobMethod(Expression<Func<Task>> methodExpression)
+    {
+        var methodCallExpression = methodExpression.Body as MethodCallExpression;
+        var declType = methodCallExpression!.Method.DeclaringType!.FullName;
+        var methodName = methodCallExpression.Method.Name;
+        var arguments = methodCallExpression;
+        var ss = serializer.Serialize(methodExpression);
+        return "";
+    }
+
+    public class MethodCall
+    {
+        public required string MethodName { get; set; }
+        public required object[] Parameters { get; set; }
+    }
+
+    public static string SerializeMethodCall(Expression<Action> expression)
+    {
+        if (expression.Body is MethodCallExpression methodCall)
+        {
+            var methodCallObj = new MethodCall
+            {
+                MethodName = methodCall.Method.Name,
+                Parameters = methodCall.Arguments.Select(arg => (arg as ConstantExpression)?.Value).ToArray()
+            };
+
+            return JsonSerializer.Serialize(methodCallObj);
+        }
+        throw new ArgumentException("Expression must be a method call.");
+    }
+
+    public static void DeserializeAndExecute(string serializedMethodCall, object targetInstance)
+    {
+        var methodCall = JsonSerializer.Deserialize<MethodCall>(serializedMethodCall);
+        if (methodCall == null)
+            throw new InvalidOperationException("Deserialization failed.");
+
+        var methodInfo = targetInstance.GetType().GetMethod(methodCall.MethodName);
+        if (methodInfo == null)
+            throw new InvalidOperationException("Method not found.");
+
+        // Invoke the method
+        methodInfo.Invoke(targetInstance, methodCall.Parameters);
     }
 }
