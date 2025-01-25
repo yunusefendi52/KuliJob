@@ -53,7 +53,7 @@ public class SerializerTest
         {
             {"decimal", decimal.MaxValue},
         };
-        await Assert.That(() => jobData.GetDecimal("decimal")).Throws<InvalidCastException>();
+        await Assert.That(() => jobData.GetValue<decimal>("decimal")).Throws<InvalidCastException>();
     }
 
     [Test]
@@ -70,9 +70,9 @@ public class SerializerTest
             {"double", double.MaxValue},
             {"data", dataSample},
         }));;
-        await Assert.That(jobDataMap!.GetDecimal("decimal")).IsEqualTo(decimal.MaxValue);
-        await Assert.That(jobDataMap!.GetDouble("double")).IsEqualTo(double.MaxValue);
-        await Assert.That(jobDataMap!.Get<DataSample>("data")).IsEqualTo(dataSample);
+        await Assert.That(jobDataMap!.GetValue<decimal>("decimal")).IsEqualTo(decimal.MaxValue);
+        await Assert.That(jobDataMap!.GetValue<double>("double")).IsEqualTo(double.MaxValue);
+        await Assert.That(jobDataMap!.GetValue<DataSample>("data")).IsEqualTo(dataSample);
     }
 
     public record DataSample

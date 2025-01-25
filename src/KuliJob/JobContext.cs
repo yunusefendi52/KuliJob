@@ -12,48 +12,23 @@ public class JobContext
 
 public class JobDataMap : Dictionary<string, object>
 {
-    public string? GetString(string key)
+    public bool TryGetValue<T>(string key, out T? value)
     {
-        return ((JsonElement)this[key]).GetString();
+        if (TryGetValue(key, out var @object))
+        {
+            var jsonEl = (JsonElement)@object;
+            value = jsonEl.Deserialize<T>(Serializer.jsonSerializerOptions);
+            return true;
+        }
+        else
+        {
+            value = default;
+            return false;
+        }
     }
 
-    public int GetInt(string key)
+    public T? GetValue<T>(string key)
     {
-        return ((JsonElement)this[key]).GetInt32();
-    }
-
-    public long GetLong(string key)
-    {
-        return ((JsonElement)this[key]).GetInt64();
-    }
-
-    public decimal GetDecimal(string key)
-    {
-        return ((JsonElement)this[key]).GetDecimal();
-    }
-
-    public double GetDouble(string key)
-    {
-        return ((JsonElement)this[key]).GetDouble();
-    }
-
-    public DateTimeOffset GetDateTimeOffset(string key)
-    {
-        return ((JsonElement)this[key]).GetDateTimeOffset();
-    }
-
-    public DateTime GetDateTime(string key)
-    {
-        return ((JsonElement)this[key]).GetDateTime();
-    }
-
-    public bool GetBool(string key)
-    {
-        return ((JsonElement)this[key]).GetBoolean();
-    }
-
-    public T? Get<T>(string key)
-    {
-        return ((JsonElement)this[key]).Deserialize<T>(Serializer.jsonSerializerOptions);
+        return TryGetValue<T>(key, out var value) ? value : default;
     }
 }
