@@ -53,7 +53,7 @@ public class ProcessJobTests : BaseTest
         var results = await Task.WhenAll(
             jobIds.Select(v => jobStorage.GetJobById(v))
         );
-        await Task.WhenAll(results.Select(async j => await Assert.That(j.FailedMessage).IsNull()));
+        await Task.WhenAll(results.Select(async j => await Assert.That(j!.FailedMessage).IsNull()));
         await Task.WhenAll(results.Select(async j => await Assert.That(j!.JobState).IsEqualTo(JobState.Completed)));
         await Assert.That(results.Length).IsEqualTo(tasksSize);
 

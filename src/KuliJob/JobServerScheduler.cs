@@ -144,7 +144,7 @@ public class JobServerScheduler(
             var methodCallObj = new MethodCall
             {
                 MethodName = methodCall.Method.Name,
-                Parameters = methodCall.Arguments.Select(arg => (arg as ConstantExpression)?.Value).ToArray()
+                Parameters = methodCall.Arguments.Select(arg => (arg as ConstantExpression)?.Value).ToArray()!
             };
 
             return JsonSerializer.Serialize(methodCallObj);

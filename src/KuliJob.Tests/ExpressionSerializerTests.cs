@@ -141,11 +141,13 @@ interface IMyService
 
 internal class MyService : IMyService
 {
-    public async Task MyMethod()
+    public Task MyMethod()
     {
+        return Task.CompletedTask;
     }
 
-    public async Task MyMethodArgs(string value)
+    public Task MyMethodArgs(string value)
     {
+        return Task.CompletedTask;
     }
 }
