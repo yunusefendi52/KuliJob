@@ -130,15 +130,6 @@ public class JobServerScheduler(
         await storage.ResumeJob(jobId);
     }
 
-    public async Task<string> ScheduleJobMethod(Expression<Func<Task>> methodExpression)
-    {
-        var methodCallExpression = methodExpression.Body as MethodCallExpression;
-        var declType = methodCallExpression!.Method.DeclaringType!.FullName;
-        var methodName = methodCallExpression.Method.Name;
-        var arguments = methodCallExpression;
-        var ss = serializer.Serialize(methodExpression);
-        return "";
-    }
 
     public class MethodCall
     {

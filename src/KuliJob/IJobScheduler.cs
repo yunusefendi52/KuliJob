@@ -10,7 +10,6 @@ public interface IJobScheduler
         return ScheduleJob(jobName, data, DateTimeOffset.UtcNow, scheduleOptions);
     }
     Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
-    Task<string> ScheduleJobMethod(Expression<Func<Task>> methodExpression);
     Task CancelJob(string jobId);
     Task ResumeJob(string jobId);
 }
