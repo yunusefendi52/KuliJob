@@ -20,7 +20,7 @@ public static class KuliJobDashboardExtensions
 #if DEBUG
             .AddRazorRuntimeCompilation(v =>
             {
-                v.FileProviders.Add(new PhysicalFileProvider(applicationBuilder.Environment.GetWWWPath()));
+                v.FileProviders.Add(new PhysicalFileProvider(Path.Join(applicationBuilder.Environment.ContentRootPath, "../", "KuliJob.Dashboard")));
             })
 #endif
             ;
