@@ -40,10 +40,10 @@
   </ItemGroup>
 
   <Target Name="GenerateHtmlCoverageReport" AfterTargets="GenerateCoverageResultAfterTest">
-    <ItemGroup>
+    <ItemGroup Condition="Exists('coverage.cobertura.xml')">
       <CoverageFiles Include="coverage.cobertura.xml" />
     </ItemGroup>
-    <ReportGenerator ProjectDirectory="$(MSBuildProjectDirectory)" ReportFiles="@(CoverageFiles)" ReportTypes="Html" TargetDirectory="coveragereport" />
+    <ReportGenerator Condition="Exists('coverage.cobertura.xml')" ProjectDirectory="$(MSBuildProjectDirectory)" ReportFiles="@(CoverageFiles)" ReportTypes="Html" TargetDirectory="coveragereport" />
   </Target>
 
 </Project>
