@@ -138,4 +138,28 @@ public class ScheduleTests : BaseTest
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.FailedMessage).Contains("No handler registered for job").And.Contains(job.JobName);
     }
+
+    [Test]
+    public async Task Can_execute_job_using_type()
+    {
+        await using var ss = await SetupServer.Start();
+        var Services = ss.Services;
+        var JobScheduler = ss.JobScheduler;
+        var jobStorage = Services.GetRequiredService<IJobStorage>();
+        var jobId = await JobScheduler.ScheduleJobNow<HandlerJob>([]);
+        var jobIdThrow = await JobScheduler.ScheduleJobNow<ThrowsHandlerJob>([], new ScheduleOptions()
+        {
+            RetryMaxCount = 0,
+        });
+        await WaitJobTicks();
+        var job = await jobStorage.GetJobById(jobId);
+        var jobThrows = await jobStorage.GetJobById(jobIdThrow);
+        await Assert.That(job!.FailedMessage).IsNull();
+        await Assert.That(job!.CompletedOn).IsNotNull();
+        await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
+
+        await Assert.That(jobThrows!.FailedMessage).IsNotNull();
+        await Assert.That(jobThrows!.FailedOn).IsNotNull();
+        await Assert.That(jobThrows!.JobState).IsEqualTo(JobState.Failed);
+    }
 }

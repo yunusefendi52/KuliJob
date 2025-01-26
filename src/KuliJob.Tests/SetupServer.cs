@@ -21,6 +21,8 @@ public class SetupServer : IAsyncDisposable
             v.AddKuliJob<ThrowsHandlerJob>("throws_handler_job");
             v.AddKuliJob<CheckDataHandlerJob>("check_data_handler_job");
             v.AddKuliJob<ConditionalThrowsHandlerJob>("conditional_throws_handler_job");
+            v.AddKuliJob<ThrowsHandlerJob>();
+            v.AddKuliJob<HandlerJob>();
 
             v.UseSqlite(":memory:");
         });

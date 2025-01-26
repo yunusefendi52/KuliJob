@@ -26,8 +26,9 @@ public static class JobExtensions
         config.AddKuliJob<ExprJob>("expr_job");
     }
 
-    public static void AddKuliJob<T>(this JobConfiguration configuration, string jobName) where T : class, IJob
+    public static void AddKuliJob<T>(this JobConfiguration configuration, string? jobName = null) where T : class, IJob
     {
+        jobName ??= typeof(T).Name;
         configuration.ServiceCollection.AddKeyedScoped<IJob, T>($"kulijob.{jobName}");
     }
 }
