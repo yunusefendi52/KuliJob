@@ -13,9 +13,9 @@ internal class PostgresJobStorage(
     [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider,
     JobConfiguration configuration) : IJobStorage
 {
-    public async Task StartStorage()
+    public async Task StartStorage(CancellationToken cancellationToken)
     {
-        await using var conn = await dataSource.OpenConnectionAsync();
+        await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
         await conn.ExecuteAsync($"""
         start transaction;
         create schema if not exists {schema};
@@ -99,9 +99,10 @@ internal class PostgresJobStorage(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
-            await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
-            var results = await conn.QueryAsync<PostgresJobInput>($"""
+            while (true)
+            {
+                await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
+                var results = (await conn.QueryAsync<PostgresJobInput>($"""
                 with locked_job as (
                     select id from {schema}.job
                     where state < '{(int)JobState.Active}'
@@ -118,17 +119,23 @@ internal class PostgresJobStorage(
                 where job.id = locked_job.id
                 returning job.*
                 """, new
-            {
-                limit = configuration.Worker,
-            });
-            if (results != null)
-            {
-                foreach (var item in results)
                 {
-                    var jobInput = item.ToJobInput();
-                    yield return jobInput;
+                    limit = configuration.Worker,
+                })).ToList()!;
+                if (results.Count != 0)
+                {
+                    foreach (var item in results)
+                    {
+                        var jobInput = item.ToJobInput();
+                        yield return jobInput;
+                    }
+                }
+                else
+                {
+                    break;
                 }
             }
+            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
         }
     }
 

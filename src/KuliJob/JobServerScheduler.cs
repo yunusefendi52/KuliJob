@@ -32,7 +32,7 @@ public class JobServerScheduler(
 
     public async Task Start()
     {
-        await storage.StartStorage();
+        await storage.StartStorage(cancellation.Token);
         logger.LogInformation("🔄 Job scheduler started");
         isStarted.SetResult(); ;
         await ProcessQueueAsync(cancellation.Token);

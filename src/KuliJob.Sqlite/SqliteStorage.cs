@@ -14,7 +14,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         db = new(connectionString);
     }
 
-    public Task StartStorage()
+    public Task StartStorage(CancellationToken cancellationToken)
     {
         db.CreateTable<SqliteJobInput>();
         return Task.CompletedTask;

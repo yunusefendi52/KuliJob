@@ -10,7 +10,7 @@ public interface IJobStorage
     Task FailJobById(string jobId, string failedMessage);
     IAsyncEnumerable<Job> FetchNextJob(CancellationToken cancellationToken = default);
     Task InsertJob(Job jobInput);
-    Task StartStorage();
+    Task StartStorage(CancellationToken cancellationToken = default);
     Task ResumeJob(string jobId);
     Task<Job> RetryJob(string jobId, int retryDelay);
 }

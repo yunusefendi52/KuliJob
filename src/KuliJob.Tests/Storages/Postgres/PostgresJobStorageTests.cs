@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Dapper;
 using KuliJob.Internals;
 using KuliJob.Postgres;
@@ -365,7 +366,52 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(batch2Delta!.Value.TotalMilliseconds).IsLessThan(50);
 
         var batchDelta = maxBatch2.StartedOn - minBatch1.StartedOn;
-        await Assert.That(batchDelta!.Value.TotalMilliseconds).IsBetween(80, 140);
+        await Assert.That(batchDelta!.Value.TotalMilliseconds).IsBetween(0, 10);
+    }
+
+    [Test]
+    public async Task Fetch_Should_Break_Inner_Loop_When_Empty()
+    {
+        await using var postgresStart = new PostgresStart(dbConnString);
+        var connString = await postgresStart.Start();
+        var services = new ServiceCollection();
+        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
+        var config = new JobConfiguration
+        {
+            ServiceCollection = services,
+            MinPollingIntervalMs = 200,
+        };
+        config.UsePostgreSQL(connString);
+        services.AddSingleton(_ => config);
+        var sp = services.BuildServiceProvider();
+        var jobStorage = sp.GetRequiredService<IJobStorage>();
+        await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
+
+        var results = ImmutableList<Job>.Empty;
+        var fetchTask = Task.Factory.StartNew(async () =>
+        {
+            await foreach (var item in jobStorage.FetchNextJob())
+            {
+                results = results.Add(item);
+            }
+        });
+
+        await Assert.That(results).HasCount().EqualToZero();
+        await Task.Delay(config.MinPollingIntervalMs);
+        await Assert.That(results).HasCount().EqualToZero();
+
+        await Parallel.ForEachAsync(Enumerable.Range(0, config.Worker), async (v, c) =>
+        {
+            var job = new Job()
+            {
+                JobName = $"job {v}",
+                StartAfter = DateTimeOffset.UtcNow,
+            };
+            await jobStorage.InsertJob(job);
+        });
+
+        await Task.Delay(config.MinPollingIntervalMs);
+        await Assert.That(results).HasCount().EqualTo(config.Worker);
     }
 
     [Test]
