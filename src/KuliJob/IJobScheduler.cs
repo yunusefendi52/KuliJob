@@ -18,20 +18,20 @@ public partial interface IJobScheduler
         return ScheduleJob(jobName, data, DateTimeOffset.UtcNow, scheduleOptions);
     }
     Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
-    Task<string> ScheduleJob(Expression<Action> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
-    Task<string> ScheduleJobNow(Expression<Action> expression, JobDataMap data, ScheduleOptions? scheduleOptions = null)
+    Task<string> ScheduleJob(Expression<Action> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
+    Task<string> ScheduleJobNow(Expression<Action> expression, ScheduleOptions? scheduleOptions = null)
     {
-        return ScheduleJob(expression, data, DateTimeOffset.UtcNow, scheduleOptions);
+        return ScheduleJob(expression, DateTimeOffset.UtcNow, scheduleOptions);
     }
-    Task<string> ScheduleJob(Expression<Func<Task>> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
-    Task<string> ScheduleJobNow(Expression<Func<Task>> expression, JobDataMap data, ScheduleOptions? scheduleOptions = null)
+    Task<string> ScheduleJob(Expression<Func<Task>> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
+    Task<string> ScheduleJobNow(Expression<Func<Task>> expression, ScheduleOptions? scheduleOptions = null)
     {
-        return ScheduleJob(expression, data, DateTimeOffset.UtcNow, scheduleOptions);
+        return ScheduleJob(expression, DateTimeOffset.UtcNow, scheduleOptions);
     }
-    Task<string> ScheduleJob<T>(Expression<Func<T, Task>> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
-    Task<string> ScheduleJobNow<T>(Expression<Func<T, Task>> expression, JobDataMap data, ScheduleOptions? scheduleOptions = null)
+    Task<string> ScheduleJob<T>(Expression<Func<T, Task>> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
+    Task<string> ScheduleJobNow<T>(Expression<Func<T, Task>> expression, ScheduleOptions? scheduleOptions = null)
     {
-        return ScheduleJob(expression, data, DateTimeOffset.UtcNow, scheduleOptions);
+        return ScheduleJob(expression, DateTimeOffset.UtcNow, scheduleOptions);
     }
     Task CancelJob(string jobId);
     Task ResumeJob(string jobId);

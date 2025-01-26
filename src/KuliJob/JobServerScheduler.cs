@@ -131,65 +131,29 @@ internal class JobServerScheduler(
         await storage.ResumeJob(jobId);
     }
 
-
-    public class MethodCall
+    public Task<string> ScheduleJob(Expression<Action> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
-        public required string MethodName { get; set; }
-        public required object[] Parameters { get; set; }
+        return ScheduleFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    public static string SerializeMethodCall(Expression<Action> expression)
+    public Task<string> ScheduleJob(Expression<Func<Task>> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
-        if (expression.Body is MethodCallExpression methodCall)
-        {
-            var methodCallObj = new MethodCall
-            {
-                MethodName = methodCall.Method.Name,
-                Parameters = methodCall.Arguments.Select(arg => (arg as ConstantExpression)?.Value).ToArray()!
-            };
-
-            return JsonSerializer.Serialize(methodCallObj);
-        }
-        throw new ArgumentException("Expression must be a method call.");
+        return ScheduleFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    public static void DeserializeAndExecute(string serializedMethodCall, object targetInstance)
+    public Task<string> ScheduleJob<T>(Expression<Func<T, Task>> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
-        var methodCall = JsonSerializer.Deserialize<MethodCall>(serializedMethodCall);
-        if (methodCall == null)
-            throw new InvalidOperationException("Deserialization failed.");
-
-        var methodInfo = targetInstance.GetType().GetMethod(methodCall.MethodName);
-        if (methodInfo == null)
-            throw new InvalidOperationException("Method not found.");
-
-        // Invoke the method
-        methodInfo.Invoke(targetInstance, methodCall.Parameters);
+        return ScheduleFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    public Task<string> ScheduleJob(Expression<Action> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
-    {
-        return ScheduleFromExpr(expression, data, startAfter, scheduleOptions);
-    }
-
-    public Task<string> ScheduleJob(Expression<Func<Task>> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
-    {
-        return ScheduleFromExpr(expression, data, startAfter, scheduleOptions);
-    }
-
-    public Task<string> ScheduleJob<T>(Expression<Func<T, Task>> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
-    {
-        return ScheduleFromExpr(expression, data, startAfter, scheduleOptions);
-    }
-
-    async Task<string> ScheduleFromExpr(LambdaExpression expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    async Task<string> ScheduleFromExpr(LambdaExpression expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
         var methodArg = expressionSerializer.FromExprToObject(expression)!;
-        return await ScheduleJob("expr_job", new()
+        return await ScheduleJob("expr_job", new JobDataMap
         {
             { "k_type", methodArg.DeclType },
             { "k_methodName", methodArg.MethodName },
-            { "k_args", methodArg.Arguments ?? [] },
+            { "k_args", methodArg.Arguments! },
         }, startAfter, scheduleOptions);
     }
 }
