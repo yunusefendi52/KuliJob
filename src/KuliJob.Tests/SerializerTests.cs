@@ -73,6 +73,10 @@ public class SerializerTest
         await Assert.That(jobDataMap!.GetValue<decimal>("decimal")).IsEqualTo(decimal.MaxValue);
         await Assert.That(jobDataMap!.GetValue<double>("double")).IsEqualTo(double.MaxValue);
         await Assert.That(jobDataMap!.GetValue<DataSample>("data")).IsEqualTo(dataSample);
+        await Assert.That(jobDataMap!.TryGetValue<string>("non_exist", out _)).IsEqualTo(false);
+        await Assert.That(jobDataMap!.TryGetValue<DataSample>("data", out _)).IsEqualTo(true);
+        await Assert.That(jobDataMap!.TryGetValue<DataSample>("data", out var _)).IsEqualTo(true);
+        await Assert.That(jobDataMap!.GetValue<DataSample>("non_exists_data")).IsNull();
     }
 
     public record DataSample

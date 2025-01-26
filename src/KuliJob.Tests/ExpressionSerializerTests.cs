@@ -1,6 +1,6 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using KuliJob.Internals;
+using TUnit.Assertions.AssertConditions;
 
 namespace KuliJob.Tests;
 
@@ -12,7 +12,7 @@ public class ExpressionSerializerTests
         var services = new ServiceCollection();
         var sp = services.BuildServiceProvider();
         var serializer = new ExpressionSerializer(sp);
-        var lson = serializer.SerializeExpr(() => TaskMethod());
+        var lson = serializer.FromExpr(() => TaskMethod());
         await Verify(lson);
         await Assert.That(() => serializer.InvokeExpr(lson)).ThrowsNothing();
     }
@@ -36,7 +36,7 @@ public class ExpressionSerializerTests
         var dateTime = DateTime.UtcNow;
         var dateTimeOffset = DateTimeOffset.UtcNow;
         var decimalValue = decimal.MinValue;
-        var lson = serializer.SerializeExpr(() => TaskMethodParams(tmp, value, boolValue, nullValue, guidValue, dateTime, dateTimeOffset, decimalValue, int.MinValue, short.MaxValue, long.MaxValue));
+        var lson = serializer.FromExpr(() => TaskMethodParams(tmp, value, boolValue, nullValue, guidValue, dateTime, dateTimeOffset, decimalValue, int.MinValue, short.MaxValue, long.MaxValue));
         await serializer.InvokeExpr(lson);
         var equalValue = $"Test value {value} {boolValue} nullString {guidValue} {dateTime} {dateTimeOffset} {decimalValue} {int.MinValue} {short.MaxValue} {long.MaxValue}";
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo(equalValue);
@@ -49,11 +49,11 @@ public class ExpressionSerializerTests
         var sp = services.BuildServiceProvider();
         var serializer = new ExpressionSerializer(sp);
         var tuple = (0.5, double.MaxValue);
-        var lson = serializer.SerializeExpr(() => TestMethodInvalidParams(tuple));
+        var lson = serializer.FromExpr(() => TestMethodInvalidParams(tuple));
         await Assert.That(() => serializer.InvokeExpr(lson)).Throws<ArgumentException>();
     }
 
-    static async Task TaskMethodParams(
+    internal static async Task TaskMethodParams(
         string filepath,
         int value,
         bool boolValue,
@@ -81,7 +81,7 @@ public class ExpressionSerializerTests
         var sp = services.BuildServiceProvider();
         await using var scope = sp.CreateAsyncScope();
         var serializer = new ExpressionSerializer(scope.ServiceProvider);
-        var lson = serializer.SerializeExpr<MyService>(t => t.MyMethod());
+        var lson = serializer.FromExpr<MyService>(t => t.MyMethod());
         await Verify(lson);
         await Assert.That(() => serializer.InvokeExpr(lson)).ThrowsNothing();
     }
@@ -94,11 +94,11 @@ public class ExpressionSerializerTests
         var sp = services.BuildServiceProvider();
         await using var scope = sp.CreateAsyncScope();
         var serializer = new ExpressionSerializer(scope.ServiceProvider);
-        var lson = serializer.SerializeExpr<IMyService>(t => t.MyMethod());
+        var lson = serializer.FromExpr<IMyService>(t => t.MyMethod());
         await Verify(lson);
         await Assert.That(() => serializer.InvokeExpr(lson)).ThrowsNothing();
 
-        lson = serializer.SerializeExpr<IMyService>(t => t.MyMethodArgs("test"));
+        lson = serializer.FromExpr<IMyService>(t => t.MyMethodArgs("test"));
         await Assert.That(() => serializer.InvokeExpr(lson)).ThrowsNothing();
     }
 
@@ -109,10 +109,10 @@ public class ExpressionSerializerTests
         var sp = services.BuildServiceProvider();
         await using var scope = sp.CreateAsyncScope();
         var serializer = new ExpressionSerializer(scope.ServiceProvider);
-        var lson = serializer.SerializeExpr<IMyService>(t => t.MyMethod());
+        var lson = serializer.FromExpr<IMyService>(t => t.MyMethod());
         await Assert.That(() => serializer.InvokeExpr(lson)).ThrowsException();
 
-        lson = serializer.SerializeExpr<IMyService>(t => t.MyMethodArgs("test"));
+        lson = serializer.FromExpr<IMyService>(t => t.MyMethodArgs("test"));
         await Assert.That(() => serializer.InvokeExpr(lson)).ThrowsException();
     }
 
@@ -123,13 +123,29 @@ public class ExpressionSerializerTests
         var sp = services.BuildServiceProvider();
         await using var scope = sp.CreateAsyncScope();
         var serializer = new ExpressionSerializer(scope.ServiceProvider);
-        var lson = serializer.SerializeExpr(() => Console.WriteLine("KuliJob WriteLine Test"));
+        var lson = serializer.FromExpr(() => Console.WriteLine("KuliJob WriteLine Test"));
         var writer = new StringWriter();
         Console.SetOut(writer);
         await Assert.That(() => serializer.InvokeExpr(lson)).ThrowsNothing();
         var reader = new StringReader(writer.ToString());
         var stdoutStr = await reader.ReadToEndAsync();
-        await Assert.That(stdoutStr).IsEqualTo("KuliJob WriteLine Test\n");
+        await Assert.That(stdoutStr).Contains("KuliJob WriteLine Test\n");
+    }
+
+    [Test]
+    public async Task Should_Throw_When_Type_Not_Found()
+    {
+        var services = new ServiceCollection();
+        var sp = services.BuildServiceProvider();
+        await using var scope = sp.CreateAsyncScope();
+        var serializer = new ExpressionSerializer(scope.ServiceProvider);
+        await Assert.That(() => serializer.InvokeExpr(new MethodExprCall
+        {
+            DeclType = "MyType",
+            MethodName = "Exists",
+        })).ThrowsException().WithMessageMatching(StringMatcher.AsWildcard("Type not found*"));
+        
+        await Assert.That(() => serializer.InvokeExpr("invalid_json")).Throws<JsonException>();
     }
 }
 

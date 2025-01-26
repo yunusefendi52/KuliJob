@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Text.Json;
-using System.Threading.Tasks;
 using KuliJob.Storages;
 
 namespace KuliJob;
@@ -16,13 +15,14 @@ public class JobConfiguration
     internal IServiceCollection ServiceCollection { get; init; } = null!;
 }
 
-public class JobServerScheduler(
+internal class JobServerScheduler(
     ILogger<JobServerScheduler> logger,
     IServiceProvider serviceProvider,
     IJobStorage storage,
     JobConfiguration configuration,
     [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider,
-    Serializer serializer) : IJobScheduler, IAsyncDisposable
+    Serializer serializer,
+    ExpressionSerializer expressionSerializer) : IJobScheduler, IAsyncDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 
@@ -165,5 +165,31 @@ public class JobServerScheduler(
 
         // Invoke the method
         methodInfo.Invoke(targetInstance, methodCall.Parameters);
+    }
+
+    public Task<string> ScheduleJob(Expression<Action> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    {
+        return ScheduleFromExpr(expression, data, startAfter, scheduleOptions);
+    }
+
+    public Task<string> ScheduleJob(Expression<Func<Task>> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    {
+        return ScheduleFromExpr(expression, data, startAfter, scheduleOptions);
+    }
+
+    public Task<string> ScheduleJob<T>(Expression<Func<T, Task>> expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    {
+        return ScheduleFromExpr(expression, data, startAfter, scheduleOptions);
+    }
+
+    async Task<string> ScheduleFromExpr(LambdaExpression expression, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    {
+        var methodArg = expressionSerializer.FromExprToObject(expression)!;
+        return await ScheduleJob("expr_job", new()
+        {
+            { "k_type", methodArg.DeclType },
+            { "k_methodName", methodArg.MethodName },
+            { "k_args", methodArg.Arguments ?? [] },
+        }, startAfter, scheduleOptions);
     }
 }

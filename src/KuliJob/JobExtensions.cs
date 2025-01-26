@@ -22,6 +22,8 @@ public static class JobExtensions
         serviceCollection.AddSingleton<Serializer>();
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());
         serviceCollection.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
+        serviceCollection.AddSingleton<ExpressionSerializer>();
+        config.AddKuliJob<ExprJob>("expr_job");
     }
 
     public static void AddKuliJob<T>(this JobConfiguration configuration, string jobName) where T : class, IJob

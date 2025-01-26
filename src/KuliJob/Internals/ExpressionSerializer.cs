@@ -4,42 +4,39 @@ using System.Text.Json;
 
 namespace KuliJob.Internals;
 
-internal class MethodExprCall
+internal record class MethodExprCall
 {
     public required string DeclType { get; set; }
 
     public required string MethodName { get; set; }
 
     public IEnumerable<MethodExprCallArg?>? Arguments { get; set; }
-}
 
-internal class MethodExprCallArg
-{
-    public string TypeName { get; set; } = null!;
-    // No direct object conversion in System.Text.Json
-    public object? Value { get; set; }
+    internal class MethodExprCallArg
+    {
+        public string TypeName { get; set; } = null!;
+
+        // No direct object conversion in System.Text.Json
+        public object? Value { get; set; }
+    }
 }
 
 internal class ExpressionSerializer(IServiceProvider serviceProvider)
 {
     internal Serializer serializer = new();
 
-    public string SerializeExpr(Expression<Action> expression)
+    public string FromExpr<T>(Expression<Func<T, Task>> expr)
     {
-        return SerializeLambdaExpr(expression);
+        return FromExpr(expression: expr);
     }
 
-    public string SerializeExpr(Expression<Func<Task>> expression)
+    public string FromExpr(LambdaExpression expression)
     {
-        return SerializeLambdaExpr(expression);
+        var methodCall = FromExprToObject(expression);
+        return serializer.Serialize(methodCall);
     }
 
-    public string SerializeExpr<T>(Expression<Func<T, Task>> expression)
-    {
-        return SerializeLambdaExpr(expression);
-    }
-
-    string SerializeLambdaExpr(LambdaExpression expression)
+    public MethodExprCall FromExprToObject(LambdaExpression expression)
     {
         if (expression.Body is not MethodCallExpression methodCallExpression)
         {
@@ -56,7 +53,7 @@ internal class ExpressionSerializer(IServiceProvider serviceProvider)
         {
             if (v is ConstantExpression constantExpression)
             {
-                return new MethodExprCallArg
+                return new MethodExprCall.MethodExprCallArg
                 {
                     TypeName = constantExpression.Type.AssemblyQualifiedName!,
                     Value = constantExpression.Value,
@@ -66,7 +63,7 @@ internal class ExpressionSerializer(IServiceProvider serviceProvider)
             {
                 var lambda = Expression.Lambda(expression);
                 var value = lambda.Compile().DynamicInvoke();
-                return new MethodExprCallArg
+                return new MethodExprCall.MethodExprCallArg
                 {
                     TypeName = expression.Type.AssemblyQualifiedName!,
                     Value = value,
@@ -75,18 +72,23 @@ internal class ExpressionSerializer(IServiceProvider serviceProvider)
             throw new ArgumentException($"Argument is not supported {v.Type}");
         });
 
-        return serializer.Serialize<MethodExprCall>(new()
+        return new()
         {
             DeclType = declType!,
             MethodName = methodName,
             Arguments = arguments,
-        });
+        };
     }
 
-    public async Task InvokeExpr(string exprJson)
+    public Task InvokeExpr(string expr)
     {
-        var methodExprCall = serializer.Deserialize<MethodExprCall>(exprJson) ?? throw new ArgumentException($"Expr not valid {exprJson}");
-        var declType = Type.GetType(methodExprCall.DeclType, true) ?? throw new ArgumentException($"Type not found {methodExprCall.DeclType}");
+        var methodExprCall = serializer.Deserialize<MethodExprCall>(expr)!;
+        return InvokeExpr(methodExprCall);
+    }
+
+    public async Task InvokeExpr(MethodExprCall methodExprCall)
+    {
+        var declType = Type.GetType(methodExprCall.DeclType, false) ?? throw new ArgumentException($"Type not found {methodExprCall.DeclType}");
         var instance = declType.IsAbstract && declType.IsSealed ? null : ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, declType);
         var arguments = methodExprCall.Arguments?.Select(v => HandleElementTypes(v!)).ToArray();
         var argTypes = methodExprCall.Arguments?.Select(v => Type.GetType(v!.TypeName))?.ToArray() ?? [];
@@ -100,7 +102,7 @@ internal class ExpressionSerializer(IServiceProvider serviceProvider)
         }
     }
 
-    internal static object? HandleElementTypes(MethodExprCallArg exprCallArg)
+    internal static object? HandleElementTypes(MethodExprCall.MethodExprCallArg exprCallArg)
     {
         var jsonElNull = exprCallArg.Value as JsonElement?;
         if (!jsonElNull.HasValue)
