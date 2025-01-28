@@ -41,6 +41,8 @@ public class SetupServer : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
+        var jobService = Services.GetRequiredService<JobServiceHosted>();
+        await jobService.StopAsync(default);
         await Services.DisposeAsync();
     }
 }
