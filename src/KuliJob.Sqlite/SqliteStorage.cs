@@ -34,7 +34,6 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         // Need handle concurrency issue with multiple worker
         while (!cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
             while (true)
             {
                 db.BeginTransaction();
@@ -66,6 +65,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
                 }
                 db.Commit();
             }
+            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
         }
     }
 
