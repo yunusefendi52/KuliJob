@@ -10,8 +10,8 @@ public class SetupServer : IAsyncDisposable
         Action<JobConfiguration>? config = null)
     {
         var services = new ServiceCollection();
+        initServices?.Invoke(services);
         services.AddLogging();
-        services.AddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         services.AddKuliJob(v =>
         {
             config?.Invoke(v);
@@ -26,7 +26,6 @@ public class SetupServer : IAsyncDisposable
 
             v.UseSqlite(":memory:");
         });
-        initServices?.Invoke(services);
         var sp = services.BuildServiceProvider();
         var jobService = sp.GetRequiredService<JobServiceHosted>();
         var jobScheduler = sp.GetRequiredService<IJobScheduler>();
