@@ -29,42 +29,39 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
         return Task.CompletedTask;
     }
 
-    public async IAsyncEnumerable<Job> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public Task<Job?> FetchNextJob(CancellationToken cancellationToken = default)
     {
-        // Need handle concurrency issue with multiple worker
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            while (true)
+            var savePoint = db.SaveTransactionPoint();
+
+            var queues = configuration.Queues;
+            var now = timeProvider.GetUtcNow();
+            var nextJob = db
+                .Table<SqliteJobInput>()
+                .OrderBy(v => v.Priority)
+                .ThenBy(v => v.CreatedOn)
+                .ThenBy(v => v.Id)
+                .Where(v => v.JobState < JobState.Active && v.StartAfter < now && queues.Contains(v.Queue))
+                .Take(1)
+                .SingleOrDefault();
+            if (nextJob is null)
             {
-                var queues = configuration.Queues;
-                var now = timeProvider.GetUtcNow();
-                db.BeginTransaction();
-                var jobs = db
-                    .Table<SqliteJobInput>()
-                    .OrderBy(v => v.Priority)
-                    .ThenBy(v => v.CreatedOn)
-                    .ThenBy(v => v.Id)
-                    .Where(v => v.JobState < JobState.Active && v.StartAfter < now && queues.Contains(v.Queue))
-                    .Take(1)
-                    .ToArray();
-                if (jobs.Length == 0)
-                {
-                    db.Commit();
-                    break;
-                }
-                foreach (var job in jobs)
-                {
-                    job.JobState = JobState.Active;
-                    job.StartedOn = timeProvider.GetUtcNow();
-                    db.Update(job);
-                }
-                db.Commit();
-                foreach (var job in jobs)
-                {
-                    yield return job.ToJobInput();
-                }
+                db.Release(savePoint);
+                return Task.FromResult<Job?>(null);
             }
-            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
+            nextJob.JobState = JobState.Active;
+            nextJob.StartedOn = timeProvider.GetUtcNow();
+            db.Update(nextJob);
+
+            db.Release(savePoint);
+
+            return Task.FromResult(nextJob?.ToJobInput());
+        }
+        catch (Exception ex)
+        {
+            db.Rollback();
+            throw;
         }
     }
 

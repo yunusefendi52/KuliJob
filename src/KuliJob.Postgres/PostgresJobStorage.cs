@@ -101,56 +101,37 @@ internal class PostgresJobStorage(
         });
     }
 
-    public async IAsyncEnumerable<Job> FetchNextJob([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async Task<Job?> FetchNextJob(CancellationToken cancellationToken = default)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        // TODO: Check queue query where here
+        var queues = string.Join(',', configuration.Queues.Select(v => $"'{v}'"));
+        if (string.IsNullOrEmpty(queues))
         {
-            while (true)
-            {
-                // TODO: Check queue query where here
-                var queues = string.Join(',', configuration.Queues.Select(v => $"'{v}'"));
-                if (string.IsNullOrEmpty(queues))
-                {
-                    break;
-                }
-                await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
-                var results = (await conn.QueryAsync<PostgresJobInput>($"""
-                with locked_job as (
-                    select id from {schema}.job
-                    where state < '{(int)JobState.Active}'
-                        and start_after < @now
-                        and queue in ({queues})
-                    order by priority, created_on, id
-                    limit @limit
-                    for update skip locked
-                )
-                update {schema}.job job
-                set
-                    state = '{(int)JobState.Active}',
-                    started_on = @now
-                from locked_job
-                where job.id = locked_job.id
-                returning job.*
-                """, new
-                {
-                    limit = 1,
-                    now = timeProvider.GetUtcNow(),
-                })).ToList()!;
-                if (results.Count != 0)
-                {
-                    foreach (var item in results)
-                    {
-                        var jobInput = item.ToJobInput();
-                        yield return jobInput;
-                    }
-                }
-                else
-                {
-                    break;
-                }
-            }
-            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
+            return null;
         }
+        await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
+        var nextJob = (await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
+        with locked_job as (
+            select id from {schema}.job
+            where state < '{(int)JobState.Active}'
+                and start_after < @now
+                and queue in ({queues})
+            order by priority, created_on, id
+            limit 1
+            for update skip locked
+        )
+        update {schema}.job job
+        set
+            state = '{(int)JobState.Active}',
+            started_on = @now
+        from locked_job
+        where job.id = locked_job.id
+        returning job.*
+        """, new
+        {
+            now = timeProvider.GetUtcNow(),
+        }));
+        return nextJob?.ToJobInput();
     }
 
     public async Task<Job?> GetJobById(string jobId)

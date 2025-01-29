@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using KuliJob.Storages;
 
@@ -71,7 +72,7 @@ internal class JobServerScheduler(
         {
             try
             {
-                await Parallel.ForEachAsync(storage.FetchNextJob(cancellation.Token), new ParallelOptions
+                await Parallel.ForEachAsync(FetchLoop(cancellation.Token), new ParallelOptions
                 {
                     CancellationToken = cancellationToken,
                     MaxDegreeOfParallelism = configuration.Worker,
@@ -81,6 +82,24 @@ internal class JobServerScheduler(
             {
                 logger.LogError(ex, "Error process job");
             }
+        }
+    }
+
+    async IAsyncEnumerable<Job> FetchLoop([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            while (true)
+            {
+                var nextJob = await storage.FetchNextJob(cancellationToken);
+                if (nextJob is null)
+                {
+                    break;
+                }
+
+                yield return nextJob;
+            }
+            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
         }
     }
 

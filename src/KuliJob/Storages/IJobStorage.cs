@@ -8,7 +8,7 @@ public interface IJobStorage
     Task CancelJobById(string jobId);
     Task CompleteJobById(string jobId);
     Task FailJobById(string jobId, string failedMessage);
-    IAsyncEnumerable<Job> FetchNextJob(CancellationToken cancellationToken = default);
+    Task<Job?> FetchNextJob(CancellationToken cancellationToken = default);
     Task InsertJob(Job jobInput);
     Task StartStorage(CancellationToken cancellationToken = default);
     Task ResumeJob(string jobId);
