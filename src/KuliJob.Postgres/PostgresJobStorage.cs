@@ -53,7 +53,7 @@ internal class PostgresJobStorage(
         await using var conn = await dataSource.OpenConnectionAsync();
         await conn.QuerySingleAsync($"""
         update {schema}.job
-        set cancelled_on = now(),
+        set cancelled_on = @now,
             state = '{(int)JobState.Cancelled}'
         where id = @id::uuid
             and state < '{(int)JobState.Completed}'
@@ -61,6 +61,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
+            now = timeProvider.GetUtcNow(),
         });
     }
 
@@ -69,7 +70,7 @@ internal class PostgresJobStorage(
         await using var conn = await dataSource.OpenConnectionAsync();
         await conn.QuerySingleAsync($"""
         update {schema}.job
-        set completed_on = now(),
+        set completed_on = @now,
             state = '{(int)JobState.Completed}'
         where id = @id::uuid
             and state = '{(int)JobState.Active}'
@@ -77,6 +78,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
+            now = timeProvider.GetUtcNow(),
         });
     }
 
@@ -85,7 +87,7 @@ internal class PostgresJobStorage(
         await using var conn = await dataSource.OpenConnectionAsync();
         await conn.QuerySingleAsync($"""
         update {schema}.job
-        set failed_on = now(),
+        set failed_on = @now,
             state = '{(int)JobState.Failed}',
             failed_message = @failedMessage
         where id = @id::uuid
@@ -95,6 +97,7 @@ internal class PostgresJobStorage(
         {
             id = jobId,
             failedMessage,
+            now = timeProvider.GetUtcNow(),
         });
     }
 
@@ -115,7 +118,7 @@ internal class PostgresJobStorage(
                 with locked_job as (
                     select id from {schema}.job
                     where state < '{(int)JobState.Active}'
-                        and start_after < now()
+                        and start_after < @now
                         and queue in ({queues})
                     order by priority, created_on, id
                     limit @limit
@@ -124,13 +127,14 @@ internal class PostgresJobStorage(
                 update {schema}.job job
                 set
                     state = '{(int)JobState.Active}',
-                    started_on = now()
+                    started_on = @now
                 from locked_job
                 where job.id = locked_job.id
                 returning job.*
                 """, new
                 {
                     limit = configuration.Worker,
+                    now = timeProvider.GetUtcNow(),
                 })).ToList()!;
                 if (results.Count != 0)
                 {
@@ -158,6 +162,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
+            now = timeProvider.GetUtcNow(),
         });
         var jobInput = result?.ToJobInput();
         return jobInput;
