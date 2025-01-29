@@ -22,7 +22,7 @@ public class JobConfiguration
 
 internal class JobServerScheduler(
     ILogger<JobServerScheduler> logger,
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     IJobStorage storage,
     JobConfiguration configuration,
     [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider,
@@ -111,7 +111,7 @@ internal class JobServerScheduler(
             using var timeoutCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(configuration.JobTimeoutMs), timeProvider);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
             cts.Token.ThrowIfCancellationRequested();
-            await using var serviceSCope = serviceProvider.CreateAsyncScope();
+            await using var serviceSCope = serviceScopeFactory.CreateAsyncScope();
             var sp = serviceSCope.ServiceProvider;
             var jobHandler = sp.GetKeyedService<IJob>($"kulijob.{jobInput.JobName}") ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
             var jobDataMap = serializer.Deserialize<JobDataMap>(jobInput.JobData);
