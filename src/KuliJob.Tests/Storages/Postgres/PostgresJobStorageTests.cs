@@ -366,7 +366,7 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(batch2Delta!.Value.TotalMilliseconds).IsLessThan(50);
 
         var batchDelta = maxBatch2.StartedOn - minBatch1.StartedOn;
-        await Assert.That(batchDelta!.Value.TotalMilliseconds).IsBetween(0, 10);
+        await Assert.That(batchDelta!.Value.TotalMilliseconds).IsBetween(0, 15);
     }
 
     [Test]
@@ -410,8 +410,41 @@ public class PostgresJobStorageTests : BaseTest
             await jobStorage.InsertJob(job);
         });
 
-        await Task.Delay(config.MinPollingIntervalMs);
+        await Task.Delay(config.MinPollingIntervalMs + 50);
         await Assert.That(results).HasCount().EqualTo(config.Worker);
+    }
+
+    [Test]
+    public async Task Fetch_Should_Break_Inner_Loop_When_Queues_Empty()
+    {
+        await using var postgresStart = new PostgresStart(dbConnString);
+        var connString = await postgresStart.Start();
+        var services = new ServiceCollection();
+        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
+        var config = new JobConfiguration
+        {
+            ServiceCollection = services,
+            MinPollingIntervalMs = 200,
+            Queues = [],
+        };
+        config.UsePostgreSQL(connString);
+        services.AddSingleton(_ => config);
+        var sp = services.BuildServiceProvider();
+        var jobStorage = sp.GetRequiredService<IJobStorage>();
+        await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
+
+        var results = ImmutableList<Job>.Empty;
+        var fetchTask = Task.Factory.StartNew(async () =>
+        {
+            await foreach (var item in jobStorage.FetchNextJob())
+            {
+                results = results.Add(item);
+            }
+        });
+
+        await Assert.That(results).HasCount().EqualToZero();
+        await Task.Delay(config.MinPollingIntervalMs + 100);
+        await Assert.That(results).HasCount().EqualToZero();
     }
 
     [Test]

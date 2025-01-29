@@ -42,4 +42,5 @@ public struct ScheduleOptions
     public int RetryMaxCount { get; set; }
     public int RetryDelayMs { get; set; }
     public int Priority { get; set; }
+    public string Queue { get; set; }
 }

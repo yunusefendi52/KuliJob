@@ -33,14 +33,17 @@ internal class PostgresJobStorage(
             cancelled_on timestamp with time zone,
             failed_on timestamp with time zone,
             failed_message text,
-            created_on timestamp with time zone not null
+            created_on timestamp with time zone not null,
+            queue text not null default 'default'
         );
         create index if not exists job_name_idx on {schema}.job (name);
         create index if not exists job_name_id_idx on {schema}.job (name, id);
         create index if not exists job_created_on_id_idx on {schema}.job (created_on, id);
         create index if not exists job_name_state_start_after_idx on {schema}.job (name, state, start_after);
+        create index if not exists job_name_state_start_after_queue_idx on {schema}.job (name, state, start_after, queue);
         alter table {schema}.job add if not exists priority smallint not null default(0);
         create index if not exists job_priority_created_on_id_idx on {schema}.job (priority, created_on, id);
+        create index if not exists job_priority_created_on_id_queue_idx on {schema}.job (priority, created_on, id, queue);
         commit;
         """);
     }
@@ -101,12 +104,19 @@ internal class PostgresJobStorage(
         {
             while (true)
             {
+                // TODO: Check queue query where here
+                var queues = string.Join(',', configuration.Queues.Select(v => $"'{v}'"));
+                if (string.IsNullOrEmpty(queues))
+                {
+                    break;
+                }
                 await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
                 var results = (await conn.QueryAsync<PostgresJobInput>($"""
                 with locked_job as (
                     select id from {schema}.job
                     where state < '{(int)JobState.Active}'
                         and start_after < now()
+                        and queue in ({queues})
                     order by priority, created_on, id
                     limit @limit
                     for update skip locked
@@ -183,9 +193,10 @@ internal class PostgresJobStorage(
             retry_count,
             retry_delay,
             start_after,
-            created_on
+            created_on,
+            queue
         )
-        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on)
+        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue)
         """;
         await using var command = dataSource.CreateCommand(commandText);
         command.Parameters.AddWithValue("@id", Guid.Parse(jobInput.Id));
@@ -197,6 +208,7 @@ internal class PostgresJobStorage(
         command.Parameters.AddWithValue("@retry_delay", jobInput.RetryDelayMs);
         command.Parameters.AddWithValue("@start_after", jobInput.StartAfter);
         command.Parameters.AddWithValue("@created_on", jobInput.CreatedOn);
+        command.Parameters.AddWithValue("@queue", NpgsqlTypes.NpgsqlDbType.Text, jobInput.Queue!);
         var rows = await command.ExecuteNonQueryAsync();
     }
 
@@ -252,6 +264,7 @@ internal class PostgresJobInput
     public int retry_count { get; set; }
     public int retry_delay { get; set; }
     public short priority { get; set; }
+    public string? queue { get; set; }
 
     public Job ToJobInput()
     {
@@ -272,6 +285,7 @@ internal class PostgresJobInput
             StartAfter = start_after,
             StartedOn = started_on,
             Priority = priority,
+            Queue = queue,
         };
     }
 }

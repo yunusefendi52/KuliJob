@@ -17,6 +17,7 @@ public class Job
         var now = DateTimeOffset.UtcNow;
         StartAfter = now;
         CreatedOn = now;
+        Queue = "default";
     }
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -34,4 +35,5 @@ public class Job
     public int RetryCount { get; set; }
     public int RetryDelayMs { get; set; }
     public int Priority { get; set; }
+    public string? Queue { get; set; }
 }

@@ -16,12 +16,12 @@ public class ParallelJobsTests : BaseTest
         var jobId1 = await ss.JobScheduler.ScheduleJob("handler_job", now);
         var jobId2 = await ss.JobScheduler.ScheduleJob("delay_handler_job", now, new()
         {
-            { "delay", 500 },
+            { "delay", 1000 },
         });
         var jobId3 = await ss.JobScheduler.ScheduleJob("handler_job", now);
         var jobId4 = await ss.JobScheduler.ScheduleJob("delay_handler_job", now, new()
         {
-            { "delay", 500 },
+            { "delay", 1000 },
         });
         await WaitJobTicks();
         var job1 = await jobStorage.GetJobById(jobId1);
@@ -34,7 +34,7 @@ public class ParallelJobsTests : BaseTest
         await Assert.That(job4!.JobState).IsEqualTo(JobState.Active);
         var job1And3Delta = job3.CompletedOn!.Value - job1.CompletedOn!.Value;
         await Assert.That(job1And3Delta).IsBetween(TimeSpan.Zero, TimeSpan.FromMilliseconds(30));
-        await Task.Delay(550);
+        await Task.Delay(1100);
         job2 = await jobStorage.GetJobById(jobId2);
         job4 = await jobStorage.GetJobById(jobId4);
         await Assert.That(job2!.JobState).IsEqualTo(JobState.Completed);

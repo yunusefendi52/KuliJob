@@ -10,6 +10,10 @@ public class JobConfiguration
     public int Worker { get; set; } = Environment.ProcessorCount * 2;
     public int MinPollingIntervalMs { get; set; } = 500;
     public int JobTimeoutMs { get; set; } = 60 * 16_000;
+    /// <summary>
+    /// Specify job which queue execute on, default queue is "default"
+    /// </summary>
+    public string[] Queues { get; set; } = ["default"];
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal IServiceCollection ServiceCollection { get; init; } = null!;
@@ -55,6 +59,7 @@ internal class JobServerScheduler(
             RetryMaxCount = scheduleOptions.HasValue ? scheduleOptions.Value.RetryMaxCount : 0,
             RetryDelayMs = scheduleOptions.HasValue ? scheduleOptions.Value.RetryDelayMs : 0,
             Priority = scheduleOptions.HasValue ? scheduleOptions.Value.Priority : 0,
+            Queue = string.IsNullOrWhiteSpace(scheduleOptions?.Queue) ? "default" : scheduleOptions.Value.Queue,
         };
         await storage.InsertJob(jobInput);
         return jobInput.Id;
