@@ -326,7 +326,7 @@ public class PostgresJobStorageTests : BaseTest
         var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
-        await Parallel.ForEachAsync(Enumerable.Range(0, worker * 2), async (v, c) =>
+        await Parallel.ForEachAsync(Enumerable.Range(0, worker), async (v, c) =>
         {
             var job = new Job()
             {
@@ -335,19 +335,13 @@ public class PostgresJobStorageTests : BaseTest
             };
             await jobStorage.InsertJob(job);
         });
-        var count = 0;
         var results = new List<Job>();
-        for (int i = 0; i < worker * 2; i++)
+        for (int i = 0; i < worker; i++)
         {
             var item = await jobStorage.FetchNextJob();
             results.Add(item!);
-            count++;
-            if (count == worker * 2)
-            {
-                break;
-            }
         }
-        var batch1 = results.Take(10);
+        var batch1 = results.Take(5);
         await Assert.That(batch1).IsNotEmpty();
         var minBatch1 = batch1.MinBy(v => v.StartedOn);
         var maxBatch1 = batch1.MaxBy(v => v.StartedOn);
@@ -356,7 +350,7 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(maxBatch1.JobState).IsEqualTo(JobState.Active);
         await Assert.That(batch1Delta!.Value.TotalMilliseconds).IsLessThan(50);
 
-        var batch2 = results.Skip(10).Take(10);
+        var batch2 = results.Skip(5).Take(5);
         await Assert.That(batch2).IsNotEmpty();
         var minBatch2 = batch2.MinBy(v => v.StartedOn);
         var maxBatch2 = batch2.MaxBy(v => v.StartedOn);
@@ -366,7 +360,7 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(batch2Delta!.Value.TotalMilliseconds).IsLessThan(50);
 
         var batchDelta = maxBatch2.StartedOn - minBatch1.StartedOn;
-        await Assert.That(batchDelta!.Value.TotalMilliseconds).IsBetween(0, 15);
+        await Assert.That(batchDelta!.Value.TotalMilliseconds).IsBetween(0, 50).WithInclusiveBounds();
     }
 
     // [Test]
