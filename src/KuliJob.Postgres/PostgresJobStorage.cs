@@ -133,7 +133,7 @@ internal class PostgresJobStorage(
                 returning job.*
                 """, new
                 {
-                    limit = configuration.Worker,
+                    limit = 1,
                     now = timeProvider.GetUtcNow(),
                 })).ToList()!;
                 if (results.Count != 0)

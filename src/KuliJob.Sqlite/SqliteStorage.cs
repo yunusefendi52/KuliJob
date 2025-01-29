@@ -45,7 +45,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
                     .ThenBy(v => v.CreatedOn)
                     .ThenBy(v => v.Id)
                     .Where(v => v.JobState < JobState.Active && v.StartAfter < now && queues.Contains(v.Queue))
-                    .Take(configuration.Worker)
+                    .Take(1)
                     .ToArray();
                 if (jobs.Length == 0)
                 {
@@ -56,16 +56,13 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
                 {
                     job.JobState = JobState.Active;
                     job.StartedOn = timeProvider.GetUtcNow();
-                    if (db.Update(job) == 1)
-                    {
-                        yield return job.ToJobInput();
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Error update fetched job {job.Id} {job.JobName}");
-                    }
+                    db.Update(job);
                 }
                 db.Commit();
+                foreach (var job in jobs)
+                {
+                    yield return job.ToJobInput();
+                }
             }
             await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
         }

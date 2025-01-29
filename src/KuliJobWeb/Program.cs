@@ -6,7 +6,8 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddKuliJob(v =>
 {
-    v.UsePostgreSQL("Host=localhost;Username=postgres;Password=postgres;Database=KuliJobWeb;Include Error Detail=True");
+    // v.UsePostgreSQL("Host=localhost;Username=postgres;Password=postgres;Database=KuliJobWeb;Include Error Detail=True");
+    v.UseSqlite("kulijob.db");
 
     v.AddKuliJob<NotifyJob>("notify_job");
 });
