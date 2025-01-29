@@ -13,9 +13,9 @@ public class ProcessJobTests : BaseTest
         });
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
         var now = DateTimeOffset.UtcNow.AddMilliseconds(1);
-        var jobId1 = await ss.JobScheduler.ScheduleJob("handler_job", [], now.AddMilliseconds(5));
-        var jobId2 = await ss.JobScheduler.ScheduleJob("handler_job", [], now.AddMilliseconds(15));
-        var jobId3 = await ss.JobScheduler.ScheduleJob("handler_job", [], now.AddMilliseconds(25));
+        var jobId1 = await ss.JobScheduler.ScheduleJob("handler_job", now.AddMilliseconds(5));
+        var jobId2 = await ss.JobScheduler.ScheduleJob("handler_job", now.AddMilliseconds(15));
+        var jobId3 = await ss.JobScheduler.ScheduleJob("handler_job", now.AddMilliseconds(25));
         await WaitJobTicks();
         var results = await Task.WhenAll(
             jobStorage.GetJobById(jobId1),

@@ -62,7 +62,7 @@ public class ScheduleTests : BaseTest
         var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var startAfter = DateTimeOffset.UtcNow.AddMinutes(1);
-        var jobId = await JobScheduler.ScheduleJob("handler_job", [], startAfter);
+        var jobId = await JobScheduler.ScheduleJob("handler_job", startAfter);
         await WaitJobTicks();
         var jobCreated = await jobStorage.GetJobById(jobId);
         await Assert.That(jobCreated).IsNotNull();

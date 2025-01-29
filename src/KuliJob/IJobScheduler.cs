@@ -5,19 +5,19 @@ namespace KuliJob;
 public partial interface IJobScheduler
 {
     Task IsStarted { get; }
-    Task<string> ScheduleJobNow<T>(JobDataMap data, ScheduleOptions? scheduleOptions = null)
+    Task<string> ScheduleJobNow<T>(JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
     {
         return ScheduleJobNow(typeof(T).Name, data, scheduleOptions);
     }
-    Task<string> ScheduleJob<T>(JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    Task<string> ScheduleJob<T>(DateTimeOffset startAfter, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
     {
-        return ScheduleJob(typeof(T).Name, data, startAfter, scheduleOptions);
+        return ScheduleJob(typeof(T).Name, startAfter, data, scheduleOptions);
     }
-    Task<string> ScheduleJobNow(string jobName, JobDataMap data, ScheduleOptions? scheduleOptions = null)
+    Task<string> ScheduleJobNow(string jobName, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
     {
-        return ScheduleJob(jobName, data, DateTimeOffset.UtcNow, scheduleOptions);
+        return ScheduleJob(jobName, DateTimeOffset.UtcNow, data, scheduleOptions);
     }
-    Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
+    Task<string> ScheduleJob(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null);
     Task<string> ScheduleJob(Expression<Action> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null);
     Task<string> ScheduleJobNow(Expression<Action> expression, ScheduleOptions? scheduleOptions = null)
     {

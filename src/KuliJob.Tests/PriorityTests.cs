@@ -18,10 +18,10 @@ public class PriorityTests : BaseTest
         var jobIds = await Task.WhenAll(Enumerable.Range(0, 4).Select(v =>
         {
             var priority = v % 2;
-            return JobScheduler.ScheduleJob("delay_handler_job", new()
+            return JobScheduler.ScheduleJob("delay_handler_job", scheduleIn, new()
             {
                 { "delay", 200 },
-            }, scheduleIn, new()
+            }, new()
             {
                 Priority = priority,
             });
@@ -72,10 +72,10 @@ public class PriorityTests : BaseTest
         var jobIds = await Task.WhenAll(Enumerable.Range(0, 4).Select(v =>
         {
             var priority = v % 2;
-            return JobScheduler.ScheduleJob("delay_handler_job", new()
+            return JobScheduler.ScheduleJob("delay_handler_job", scheduleIn, new()
             {
                 { "delay", 200 },
-            }, scheduleIn, new()
+            }, new()
             {
                 Priority = priority,
             });

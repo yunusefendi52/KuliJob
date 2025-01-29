@@ -44,7 +44,7 @@ internal class JobServerScheduler(
         await cancellation.CancelAsync();
     }
 
-    public async Task<string> ScheduleJob(string jobName, JobDataMap data, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    public async Task<string> ScheduleJob(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
     {
         var jobData = serializer.Serialize(data);
         var jobInput = new Job
@@ -149,11 +149,11 @@ internal class JobServerScheduler(
     async Task<string> ScheduleFromExpr(LambdaExpression expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
     {
         var methodArg = expressionSerializer.FromExprToObject(expression)!;
-        return await ScheduleJob("expr_job", new JobDataMap
+        return await ScheduleJob("expr_job", startAfter, new JobDataMap
         {
             { "k_type", methodArg.DeclType },
             { "k_methodName", methodArg.MethodName },
             { "k_args", methodArg.Arguments! },
-        }, startAfter, scheduleOptions);
+        }, scheduleOptions);
     }
 }

@@ -18,7 +18,7 @@ public class FetchJobStoppedTests : BaseTest
             });
             var Services = ss.Services;
             var JobScheduler = ss.JobScheduler;
-            jobId = await JobScheduler.ScheduleJob("handler_job", [], scheduleAt);
+            jobId = await JobScheduler.ScheduleJob("handler_job", scheduleAt);
         }
         {
             await using var ss = await SetupServer.Start(config: v =>
@@ -48,7 +48,7 @@ public class FetchJobStoppedTests : BaseTest
             });
             var Services = ss.Services;
             var JobScheduler = ss.JobScheduler;
-            jobId = await JobScheduler.ScheduleJob("handler_job", [], DateTimeOffset.UtcNow.AddSeconds(1.5));
+            jobId = await JobScheduler.ScheduleJob("handler_job", DateTimeOffset.UtcNow.AddSeconds(1.5));
         }
         await Task.Delay(1500);
         {
