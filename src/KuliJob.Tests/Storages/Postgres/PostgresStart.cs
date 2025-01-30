@@ -13,6 +13,13 @@ public class PostgresStart(string dbConnString) : IAsyncDisposable
     {
         databaseName = $"kulijob_db_test_{Guid.NewGuid().ToString()[..8]}";
         await conn.ExecuteAsync($"create database {databaseName}");
+        await conn.QuerySingleAsync("""
+        select 1 from pg_catalog.pg_database
+        where datname = @dbName
+        """, new
+        {
+            dbName = databaseName,
+        });
         connString = $"{dbConnString};Database={databaseName};";
         return connString;
     }
