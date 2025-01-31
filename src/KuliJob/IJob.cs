@@ -2,5 +2,5 @@ namespace KuliJob;
 
 public interface IJob
 {
-    Task Execute(JobContext context, CancellationToken cancellationToken = default);
+    Task Execute(JobContext context);
 }

@@ -3,7 +3,7 @@ namespace KuliJob;
 
 internal class ExprJob : IJob
 {
-    public async Task Execute(JobContext context, CancellationToken cancellationToken = default)
+    public async Task Execute(JobContext context)
     {
         var type = context.JobData.GetValue<string>("k_type");
         var methodName = context.JobData.GetValue<string>("k_methodName");

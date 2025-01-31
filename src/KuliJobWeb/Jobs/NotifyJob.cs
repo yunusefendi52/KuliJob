@@ -6,7 +6,7 @@ public class NotifyJob(
     HttpClient httpClient,
     ILogger<NotifyJob> logger) : IJob
 {
-    public async Task Execute(JobContext context, CancellationToken cancellationToken = default)
+    public async Task Execute(JobContext context)
     {
         logger.LogInformation("Start sending notification");
 

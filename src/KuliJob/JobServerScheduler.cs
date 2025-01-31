@@ -10,7 +10,6 @@ public class JobConfiguration
 {
     public int Worker { get; set; } = Environment.ProcessorCount * 2;
     public int MinPollingIntervalMs { get; set; } = 500;
-    public int JobTimeoutMs { get; set; } = 60 * 16_000;
     /// <summary>
     /// Specify job which queue execute on, default queue is "default"
     /// </summary>
@@ -108,7 +107,7 @@ internal class JobServerScheduler(
     RETRY:
         try
         {
-            using var timeoutCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(configuration.JobTimeoutMs), timeProvider);
+            using var timeoutCancellation = new CancellationTokenSource();
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
             cts.Token.ThrowIfCancellationRequested();
             await using var serviceSCope = serviceScopeFactory.CreateAsyncScope();
@@ -122,7 +121,7 @@ internal class JobServerScheduler(
                 JobData = jobDataMap!,
                 RetryCount = jobInput.RetryCount,
             };
-            await jobHandler.Execute(jobContext, cts.Token);
+            await jobHandler.Execute(jobContext);
             await storage.CompleteJobById(jobInput.Id);
         }
         catch (Exception ex)

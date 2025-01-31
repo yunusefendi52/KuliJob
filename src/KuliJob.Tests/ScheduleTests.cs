@@ -5,25 +5,6 @@ namespace KuliJob.Tests;
 public class ScheduleTests : BaseTest
 {
     [Test]
-    public async Task ShouldFailJobWhenTimedOut()
-    {
-        await using var ss = await SetupServer.Start(config: v =>
-        {
-            v.JobTimeoutMs = 450;
-        });
-        var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
-        var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("delay_handler_job", []);
-        await WaitJobTicks(2);
-        var job = await jobStorage.GetJobById(jobId);
-        await Assert.That(job).IsNotNull();
-        await Assert.That(job!.JobState).IsEqualTo(JobState.Failed);
-        await Assert.That(job!.FailedOn).IsNotNull();
-        await Assert.That(job!.FailedMessage).IsEqualTo("A task was canceled.");
-    }
-
-    [Test]
     public async Task ShouldCompleteJobImmediately()
     {
         await using var ss = await SetupServer.Start();
