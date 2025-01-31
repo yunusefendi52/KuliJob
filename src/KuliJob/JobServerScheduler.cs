@@ -17,6 +17,7 @@ public class JobConfiguration
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal IServiceCollection ServiceCollection { get; init; } = null!;
+    internal JobFactory JobFactory { get; init; } = null!;
 }
 
 internal class JobServerScheduler(
@@ -110,9 +111,10 @@ internal class JobServerScheduler(
             using var timeoutCancellation = new CancellationTokenSource();
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
             cts.Token.ThrowIfCancellationRequested();
-            await using var serviceSCope = serviceScopeFactory.CreateAsyncScope();
-            var sp = serviceSCope.ServiceProvider;
-            var jobHandler = sp.GetKeyedService<IJob>($"kulijob.{jobInput.JobName}") ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
+            await using var serviceScope = serviceScopeFactory.CreateAsyncScope();
+            var sp = serviceScope.ServiceProvider;
+            var jobFactory = sp.GetRequiredService<JobFactory>();
+            var jobHandler = jobFactory.ResolveService(sp, jobInput.JobName) ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
             var jobDataMap = serializer.Deserialize<JobDataMap>(jobInput.JobData);
             var jobContext = new JobContext
             {

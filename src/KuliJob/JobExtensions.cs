@@ -10,9 +10,12 @@ public static class JobExtensions
         this IServiceCollection serviceCollection,
         Action<JobConfiguration>? configure = null)
     {
+        var jobFactory = new JobFactory(serviceCollection);
+        serviceCollection.AddSingleton(jobFactory);
         var config = new JobConfiguration()
         {
             ServiceCollection = serviceCollection,
+            JobFactory = jobFactory,
         };
         configure?.Invoke(config);
         serviceCollection.AddSingleton(config);
@@ -28,7 +31,8 @@ public static class JobExtensions
 
     public static void AddKuliJob<T>(this JobConfiguration configuration, string? jobName = null) where T : class, IJob
     {
-        jobName ??= typeof(T).Name;
-        configuration.ServiceCollection.AddKeyedScoped<IJob, T>($"kulijob.{jobName}");
+        var tType = typeof(T);
+        jobName ??= tType.Name;
+        configuration.JobFactory.RegisterJob(jobName, tType);
     }
 }
