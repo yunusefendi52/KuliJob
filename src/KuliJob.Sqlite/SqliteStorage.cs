@@ -145,7 +145,7 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
 
     public Task<Job> RetryJob(string jobId, int retryDelay)
     {
-        var jobInput = db.Find<SqliteJobInput>(jobId);
+        var jobInput = db.Find<SqliteJobInput>(v => v.Id == jobId);
         jobInput.JobState = JobState.Retry;
         jobInput.RetryCount++;
         jobInput.StartAfter = jobInput.StartAfter.AddMilliseconds(retryDelay);
@@ -154,6 +154,12 @@ internal class SqliteStorage(JobConfiguration configuration, [FromKeyedServices(
             throw new ArgumentException($"Failed to retry job {jobInput.Id}");
         }
         return Task.FromResult(jobInput.ToJobInput());
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        db.Dispose();
+        return ValueTask.CompletedTask;
     }
 }
 

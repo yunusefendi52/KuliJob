@@ -1,3 +1,5 @@
+using KuliJob.Tests.Storages.Postgres;
+
 namespace KuliJob.Tests;
 
 public class SetupServer : IAsyncDisposable
@@ -5,10 +7,37 @@ public class SetupServer : IAsyncDisposable
     public ServiceProvider Services { get; private set; } = null!;
     public IJobScheduler JobScheduler { get; private set; } = null!;
 
+    public Func<Task>? Dispose { get; private set; }
+
     public static async Task<SetupServer> Start(
         Action<IServiceCollection>? initServices = null,
         Action<JobConfiguration>? config = null)
     {
+        Func<Task>? Dispose = null;
+        string connString = null!;
+        if (ModuleInitializer.K_TestStorage == KTestType.Pg)
+        {
+            var postgresStart = new PostgresStart();
+            connString = await postgresStart.Start();
+            Dispose = async () =>
+            {
+                await postgresStart.DisposeAsync();
+            };
+        }
+        else if (ModuleInitializer.K_TestStorage == KTestType.Memory)
+        {
+            connString = ":memory:";
+        }
+        else if (ModuleInitializer.K_TestStorage == KTestType.Sqlite)
+        {
+            connString = Path.GetTempFileName();
+            Dispose = () =>
+            {
+                File.Delete(connString);
+                return Task.CompletedTask;
+            };
+        }
+
         var services = new ServiceCollection();
         initServices?.Invoke(services);
         services.AddLogging();
@@ -25,7 +54,18 @@ public class SetupServer : IAsyncDisposable
             v.AddKuliJob<HandlerJob>();
             v.AddKuliJob<DelayHandlerJob>();
 
-            v.UseSqlite(":memory:");
+            if (ModuleInitializer.K_TestStorage == KTestType.Memory || ModuleInitializer.K_TestStorage == KTestType.Sqlite)
+            {
+                v.UseSqlite(connString);
+            }
+            else if (ModuleInitializer.K_TestStorage == KTestType.Pg)
+            {
+                v.UsePostgreSQL(connString);
+            }
+            else
+            {
+                throw new ArgumentException("Invalid test storage");
+            }
         });
         var sp = services.BuildServiceProvider();
         var jobService = sp.GetRequiredService<JobServiceHosted>();
@@ -36,6 +76,7 @@ public class SetupServer : IAsyncDisposable
         {
             Services = sp,
             JobScheduler = jobScheduler,
+            Dispose = Dispose,
         };
     }
 
@@ -45,5 +86,9 @@ public class SetupServer : IAsyncDisposable
         var jobService = Services.GetRequiredService<JobServiceHosted>();
         await jobService.StopAsync(default);
         await Services.DisposeAsync();
+        if (Dispose is not null)
+        {
+            await Dispose.Invoke();
+        }
     }
 }

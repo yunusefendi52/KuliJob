@@ -34,7 +34,8 @@ internal class PostgresJobStorage(
             failed_on timestamp with time zone,
             failed_message text,
             created_on timestamp with time zone not null,
-            queue text not null default 'default'
+            queue text not null default 'default',
+            priority smallint not null default(0)
         );
         create index if not exists job_name_idx on {schema}.job (name);
         create index if not exists job_name_id_idx on {schema}.job (name, id);
@@ -110,7 +111,7 @@ internal class PostgresJobStorage(
             return null;
         }
         await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
-        var nextJob = (await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
+        var nextJob = await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
         with locked_job as (
             select id from {schema}.job
             where state < '{(int)JobState.Active}'
@@ -130,7 +131,7 @@ internal class PostgresJobStorage(
         """, new
         {
             now = timeProvider.GetUtcNow(),
-        }));
+        });
         return nextJob?.ToJobInput();
     }
 
@@ -180,9 +181,10 @@ internal class PostgresJobStorage(
             retry_delay,
             start_after,
             created_on,
-            queue
+            queue,
+            priority
         )
-        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue)
+        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue, @priority)
         """;
         await using var command = dataSource.CreateCommand(commandText);
         command.Parameters.AddWithValue("@id", Guid.Parse(jobInput.Id));
@@ -195,6 +197,7 @@ internal class PostgresJobStorage(
         command.Parameters.AddWithValue("@start_after", jobInput.StartAfter);
         command.Parameters.AddWithValue("@created_on", jobInput.CreatedOn);
         command.Parameters.AddWithValue("@queue", NpgsqlTypes.NpgsqlDbType.Text, jobInput.Queue!);
+        command.Parameters.AddWithValue("@priority", jobInput.Priority);
         var rows = await command.ExecuteNonQueryAsync();
     }
 
@@ -221,15 +224,20 @@ internal class PostgresJobStorage(
         update {schema}.job
         set completed_on = null,
             state = '{(int)JobState.Retry}',
-            start_after = start_after + ({retryDelay} * interval '1 ms')
+            start_after = start_after + ({retryDelay} * interval '1 ms'),
+            retry_count = retry_count + 1
         where id = @id::uuid
-            and state = '{(int)JobState.Cancelled}'
         returning *
         """, new
         {
             id = jobId,
         });
         return result.ToJobInput();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 }
 

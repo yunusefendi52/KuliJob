@@ -16,7 +16,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Start_And_Migrate_PostgresJob()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -38,7 +38,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Start_And_Migrate_PostgresJob_WithCustomSchema()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -61,7 +61,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Insert_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -110,7 +110,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Get_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -144,7 +144,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Should_Return_Null_When_No_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -164,7 +164,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Cancel_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -211,7 +211,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Complete_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -249,7 +249,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Fail_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -287,7 +287,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Cancelled_Fetch_Job_Should_Throws()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -310,7 +310,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Fetch_Job_Should_Not_Empty()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -366,7 +366,7 @@ public class PostgresJobStorageTests : BaseTest
     // [Test]
     // public async Task Fetch_Should_Break_Inner_Loop_When_Empty()
     // {
-    //     await using var postgresStart = new PostgresStart(dbConnString);
+    //     await using var postgresStart = new PostgresStart();
     //     var connString = await postgresStart.Start();
     //     var services = new ServiceCollection();
     //     services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -411,7 +411,7 @@ public class PostgresJobStorageTests : BaseTest
     // [Test]
     // public async Task Fetch_Should_Break_Inner_Loop_When_Queues_Empty()
     // {
-    //     await using var postgresStart = new PostgresStart(dbConnString);
+    //     await using var postgresStart = new PostgresStart();
     //     var connString = await postgresStart.Start();
     //     var services = new ServiceCollection();
     //     services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -444,7 +444,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Resume_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -481,7 +481,7 @@ public class PostgresJobStorageTests : BaseTest
     [Test]
     public async Task Can_Retry_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
@@ -514,16 +514,17 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(theJob!.Id).IsEqualTo(retriedJob!.Id);
         await Assert.That(theJob!.JobState).IsEqualTo(JobState.Retry);
         await Assert.That(theJob!.CompletedOn).IsNull();
+        await Assert.That(theJob!.RetryCount).IsEqualTo(1);
         await Assert.That(theJob!.StartAfter).IsEqualTo(retriedJob.StartAfter);
         var deltaRetryTime = retryTime - retriedJob.StartAfter;
         await Assert.That(deltaRetryTime.TotalMilliseconds).IsLessThan(25);
-        await Assert.That(() => jobStorage.RetryJob(jobId, 250)).ThrowsException();
+        // await Assert.That(() => jobStorage.RetryJob(jobId, 250)).ThrowsException();
     }
 
     [Test]
     public async Task Can_Fetch_Latest_Job()
     {
-        await using var postgresStart = new PostgresStart(dbConnString);
+        await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
         services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);

@@ -3,8 +3,10 @@ using Npgsql;
 
 namespace KuliJob.Tests.Storages.Postgres;
 
-public class PostgresStart(string dbConnString) : IAsyncDisposable
+public class PostgresStart() : IAsyncDisposable
 {
+    const string dbConnString = "Host=localhost;Username=postgres;Password=postgres;Include Error Detail=True";
+    
     readonly NpgsqlConnection conn = new(dbConnString);
     string connString = null!;
     string databaseName = null!;

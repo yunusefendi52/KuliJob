@@ -1,6 +1,6 @@
 namespace KuliJob.Storages;
 
-public interface IJobStorage
+public interface IJobStorage : IAsyncDisposable
 {
     // Task<JobInput?> GetJobByState(string jobId, JobState jobState);
     Task<Job?> GetJobById(string jobId);
