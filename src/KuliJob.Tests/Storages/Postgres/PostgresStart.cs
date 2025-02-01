@@ -29,7 +29,7 @@ public class PostgresStart() : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-        await conn.ExecuteAsync($"drop database {databaseName} with (force)");
+        await conn.ExecuteAsync($"drop database {databaseName} with (force);");
         await conn.DisposeAsync();
     }
 }

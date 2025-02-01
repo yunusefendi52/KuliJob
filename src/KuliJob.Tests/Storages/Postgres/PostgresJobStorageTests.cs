@@ -19,7 +19,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -29,7 +28,7 @@ public class PostgresJobStorageTests : BaseTest
         var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
-        var dataSource = sp.GetRequiredKeyedService<NpgsqlDataSource>(KeyedType.KuliJobDb);
+        var dataSource = sp.GetRequiredService<PgDataSource>();
         await using var conn = await dataSource.OpenConnectionAsync();
         await Assert.That(() => conn.QueryAsync("select * from kulijob.job")).IsEmpty();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
@@ -41,7 +40,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -51,7 +49,7 @@ public class PostgresJobStorageTests : BaseTest
         var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
-        var dataSource = sp.GetRequiredKeyedService<NpgsqlDataSource>(KeyedType.KuliJobDb);
+        var dataSource = sp.GetRequiredService<PgDataSource>();
         await using var conn = await dataSource.OpenConnectionAsync();
         await Assert.That(() => conn.QueryAsync("select * from kulijob.job")).IsNull();
         await Assert.That(() => conn.QueryAsync("select * from myschemajob.job")).IsEmpty();
@@ -64,7 +62,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -113,7 +110,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -147,7 +143,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -167,7 +162,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -214,7 +208,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -252,7 +245,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -290,7 +282,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -313,7 +304,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var worker = 10;
         var config = new JobConfiguration
         {
@@ -369,7 +359,6 @@ public class PostgresJobStorageTests : BaseTest
     //     await using var postgresStart = new PostgresStart();
     //     var connString = await postgresStart.Start();
     //     var services = new ServiceCollection();
-    //     services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
     //     var config = new JobConfiguration
     //     {
     //         ServiceCollection = services,
@@ -414,7 +403,6 @@ public class PostgresJobStorageTests : BaseTest
     //     await using var postgresStart = new PostgresStart();
     //     var connString = await postgresStart.Start();
     //     var services = new ServiceCollection();
-    //     services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
     //     var config = new JobConfiguration
     //     {
     //         ServiceCollection = services,
@@ -447,7 +435,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -484,7 +471,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,
@@ -527,7 +513,6 @@ public class PostgresJobStorageTests : BaseTest
         await using var postgresStart = new PostgresStart();
         var connString = await postgresStart.Start();
         var services = new ServiceCollection();
-        services.TryAddKeyedSingleton("kulijob_timeprovider", TimeProvider.System);
         var config = new JobConfiguration
         {
             ServiceCollection = services,

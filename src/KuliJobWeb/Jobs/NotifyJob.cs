@@ -15,7 +15,7 @@ public class NotifyJob(
         await httpClient.PostAsJsonAsync("https://webhook.site/631adca8-cc1b-4f8c-b578-1796ece2f377/notify-job", new
         {
             Message = msg,
-        }, cancellationToken: cancellationToken);
+        });
         
         logger.LogInformation("Notification sent");
     }

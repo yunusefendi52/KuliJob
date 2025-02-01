@@ -25,7 +25,6 @@ internal class JobServerScheduler(
     IServiceScopeFactory serviceScopeFactory,
     IJobStorage storage,
     JobConfiguration configuration,
-    [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider,
     Serializer serializer,
     ExpressionSerializer expressionSerializer) : IJobScheduler, IAsyncDisposable
 {
@@ -43,10 +42,11 @@ internal class JobServerScheduler(
         await ProcessQueueAsync(cancellation.Token);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-        await cancellation.CancelAsync();
+        cancellation.Cancel();
+        return ValueTask.CompletedTask;
     }
 
     public async Task<string> ScheduleJob(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
@@ -99,7 +99,7 @@ internal class JobServerScheduler(
 
                 yield return nextJob;
             }
-            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), timeProvider, cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), cancellationToken);
         }
     }
 

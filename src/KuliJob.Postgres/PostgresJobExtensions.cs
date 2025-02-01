@@ -15,11 +15,7 @@ public static class PostgresJobExtension
         Logging.ILoggerFactory? loggerFactory = null)
     {
         var services = jobConfiguration.ServiceCollection;
-        services.AddNpgsqlSlimDataSource(connectionString, v =>
-        {
-            v.UseLoggerFactory(loggerFactory ?? new NullLoggerFactory());
-        }, serviceKey: KeyedType.KuliJobDb);
-        services.AddKeyedSingleton(KeyedType.Schema, schema);
+        services.AddSingleton(_ => new PgDataSource(connectionString, schema));
         services.TryAddSingleton<PostgresJobStorage>();
         services.TryAddSingleton<IJobStorage>(sp =>
         {

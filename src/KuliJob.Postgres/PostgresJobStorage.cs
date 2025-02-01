@@ -8,11 +8,11 @@ using Npgsql;
 namespace KuliJob.Postgres;
 
 internal class PostgresJobStorage(
-    [FromKeyedServices(KeyedType.Schema)] string schema,
-    [FromKeyedServices(KeyedType.KuliJobDb)] NpgsqlDataSource dataSource,
-    [FromKeyedServices("kulijob_timeprovider")] TimeProvider timeProvider,
+    PgDataSource dataSource,
     JobConfiguration configuration) : IJobStorage
 {
+    readonly string schema = dataSource.Schema;
+
     public async Task StartStorage(CancellationToken cancellationToken)
     {
         await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -62,7 +62,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
-            now = timeProvider.GetUtcNow(),
+            now = DateTimeOffset.UtcNow,
         });
     }
 
@@ -79,7 +79,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
-            now = timeProvider.GetUtcNow(),
+            now = DateTimeOffset.UtcNow,
         });
     }
 
@@ -98,7 +98,7 @@ internal class PostgresJobStorage(
         {
             id = jobId,
             failedMessage,
-            now = timeProvider.GetUtcNow(),
+            now = DateTimeOffset.UtcNow,
         });
     }
 
@@ -130,7 +130,7 @@ internal class PostgresJobStorage(
         returning job.*
         """, new
         {
-            now = timeProvider.GetUtcNow(),
+            now = DateTimeOffset.UtcNow,
         });
         return nextJob?.ToJobInput();
     }
@@ -144,7 +144,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
-            now = timeProvider.GetUtcNow(),
+            now = DateTimeOffset.UtcNow,
         });
         var jobInput = result?.ToJobInput();
         return jobInput;
@@ -186,7 +186,8 @@ internal class PostgresJobStorage(
         )
         values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue, @priority)
         """;
-        await using var command = dataSource.CreateCommand(commandText);
+        await using var conn = await dataSource.OpenConnectionAsync();
+        await using var command = new NpgsqlCommand(commandText, conn);
         command.Parameters.AddWithValue("@id", Guid.Parse(jobInput.Id));
         command.Parameters.AddWithValue("@name", jobInput.JobName);
         command.Parameters.AddWithValue("@data", NpgsqlTypes.NpgsqlDbType.Jsonb, jobInput.JobData == null ? DBNull.Value : jobInput.JobData);
