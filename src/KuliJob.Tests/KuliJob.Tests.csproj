@@ -43,7 +43,7 @@
     <ItemGroup Condition="Exists('coverage.cobertura.xml')">
       <CoverageFiles Include="coverage.cobertura.xml" />
     </ItemGroup>
-    <ReportGenerator Condition="Exists('coverage.cobertura.xml')" ProjectDirectory="$(MSBuildProjectDirectory)" ReportFiles="@(CoverageFiles)" ReportTypes="Html" TargetDirectory="coveragereport" />
+    <ReportGenerator Condition="Exists('coverage.cobertura.xml')" ProjectDirectory="$(MSBuildProjectDirectory)" ReportFiles="@(CoverageFiles)" ReportTypes="Html" TargetDirectory="coveragereport\$(K_TEST_STORAGE)" />
   </Target>
 
 </Project>

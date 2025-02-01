@@ -28,7 +28,14 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
+      run: |
+        runTest() {
+          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
+        }
+        K_TEST_STORAGE=sqlite runTest &
+        K_TEST_STORAGE=pg runTest &
+        K_TEST_STORAGE=memory runTest &
+        wait
     
     - uses: actions/upload-artifact@v4
       with:
