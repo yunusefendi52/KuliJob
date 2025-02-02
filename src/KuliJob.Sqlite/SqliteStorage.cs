@@ -1,11 +1,12 @@
 using System.Runtime.CompilerServices;
+using KuliJob.Internals;
 using KuliJob.Storages;
 using Microsoft.Extensions.DependencyInjection;
 using SQLite;
 
 namespace KuliJob.Sqlite;
 
-internal class SqliteStorage(JobConfiguration configuration) : IJobStorage
+internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : IJobStorage
 {
     SQLiteConnection db = null!;
 
@@ -36,7 +37,7 @@ internal class SqliteStorage(JobConfiguration configuration) : IJobStorage
             var savePoint = db.SaveTransactionPoint();
 
             var queues = configuration.Queues;
-            var now = DateTimeOffset.UtcNow;
+            var now = myClock.GetUtcNow();
             var nextJob = db
                 .Table<SqliteJobInput>()
                 .OrderBy(v => v.Priority)
@@ -51,7 +52,7 @@ internal class SqliteStorage(JobConfiguration configuration) : IJobStorage
                 return Task.FromResult<Job?>(null);
             }
             nextJob.JobState = JobState.Active;
-            nextJob.StartedOn = DateTimeOffset.UtcNow;
+            nextJob.StartedOn = myClock.GetUtcNow();
             db.Update(nextJob);
 
             db.Release(savePoint);
@@ -69,7 +70,7 @@ internal class SqliteStorage(JobConfiguration configuration) : IJobStorage
     {
         var jobInput = db.Find<SqliteJobInput>(jobId);
         jobInput.JobState = JobState.Completed;
-        jobInput.CompletedOn = DateTimeOffset.UtcNow;
+        jobInput.CompletedOn = myClock.GetUtcNow();
         if (db.Update(jobInput) != 1)
         {
             throw new ArgumentException($"Failed complete job {jobInput.Id}");
@@ -81,7 +82,7 @@ internal class SqliteStorage(JobConfiguration configuration) : IJobStorage
     {
         var jobInput = db.Find<SqliteJobInput>(jobId);
         jobInput.JobState = JobState.Cancelled;
-        jobInput.CancelledOn = DateTimeOffset.UtcNow;
+        jobInput.CancelledOn = myClock.GetUtcNow();
         if (db.Update(jobInput) != 1)
         {
             throw new ArgumentException($"Failed cancel job {jobInput.Id}");
@@ -93,7 +94,7 @@ internal class SqliteStorage(JobConfiguration configuration) : IJobStorage
     {
         var jobInput = db.Find<SqliteJobInput>(jobId);
         jobInput.JobState = JobState.Failed;
-        jobInput.FailedOn = DateTimeOffset.UtcNow;
+        jobInput.FailedOn = myClock.GetUtcNow();
         jobInput.FailedMessage = failedMessage;
         if (db.Update(jobInput) != 1)
         {

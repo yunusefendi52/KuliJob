@@ -11,21 +11,26 @@ namespace KuliJob.Tests.Storages.Postgres;
 [Parallelizable]
 public class PostgresJobStorageTests : BaseTest
 {
-    const string dbConnString = "Host=localhost;Username=postgres;Password=postgres;Include Error Detail=True";
+    static async Task<IServiceProvider> AddTestsServices(PostgresStart postgresStart, string? schema = null)
+    {
+        var connString = await postgresStart.Start();
+        var services = new ServiceCollection();
+        services.AddSingleton<MyClock>();
+        var config = new JobConfiguration
+        {
+            ServiceCollection = services,
+        };
+        config.UsePostgreSQL(connString, schema);
+        services.AddSingleton(_ => config);
+        var sp = services.BuildServiceProvider();
+        return sp;
+    }
 
     [Test]
     public async Task Can_Start_And_Migrate_PostgresJob()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart);
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var dataSource = sp.GetRequiredService<PgDataSource>();
@@ -38,15 +43,7 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Start_And_Migrate_PostgresJob_WithCustomSchema()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString, "myschemajob");
-        services.AddSingleton(_ => config);
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart, "myschemajob");
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var dataSource = sp.GetRequiredService<PgDataSource>();
@@ -60,17 +57,8 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Insert_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddLogging();
-        services.AddSingleton(_ => config);
+        var sp = await AddTestsServices(postgresStart);
         var serializer = new Serializer();
-        var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var startAfter = DateTimeOffset.UtcNow.AddMilliseconds(-250);
@@ -108,16 +96,7 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Get_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddLogging();
-        services.AddSingleton(_ => config);
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart);
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var startAfter = DateTimeOffset.UtcNow;
@@ -141,16 +120,7 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Should_Return_Null_When_No_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddLogging();
-        services.AddSingleton(_ => config);
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart);
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         await Assert.That(() => jobStorage.GetJobById("2d212fa9-4b15-45fe-a65c-22de0b6b25ef")).IsNull();
@@ -160,16 +130,8 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Cancel_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
+        var sp = await AddTestsServices(postgresStart);
         var serializer = new Serializer();
-        var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var startAfter = DateTimeOffset.UtcNow.AddMilliseconds(-250);
@@ -206,16 +168,8 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Complete_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
+        var sp = await AddTestsServices(postgresStart);
         var serializer = new Serializer();
-        var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var startAfter = DateTimeOffset.UtcNow.AddMilliseconds(-250);
@@ -243,16 +197,8 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Fail_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
+        var sp = await AddTestsServices(postgresStart);
         var serializer = new Serializer();
-        var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var startAfter = DateTimeOffset.UtcNow.AddMilliseconds(-250);
@@ -280,15 +226,7 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Cancelled_Fetch_Job_Should_Throws()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart);
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -302,18 +240,8 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Fetch_Job_Should_Not_Empty()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
+        var sp = await AddTestsServices(postgresStart);
         var worker = 10;
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-            MinPollingIntervalMs = 100,
-            Worker = worker,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
-        var sp = services.BuildServiceProvider();
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         await Parallel.ForEachAsync(Enumerable.Range(0, worker), async (v, c) =>
@@ -433,16 +361,7 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Resume_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
-        var serializer = new Serializer();
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart);
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var startAfter = DateTimeOffset.UtcNow.AddMilliseconds(-250);
@@ -469,16 +388,7 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Retry_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddSingleton(_ => config);
-        var serializer = new Serializer();
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart);
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         var startAfter = DateTimeOffset.UtcNow;
@@ -511,16 +421,7 @@ public class PostgresJobStorageTests : BaseTest
     public async Task Can_Fetch_Latest_Job()
     {
         await using var postgresStart = new PostgresStart();
-        var connString = await postgresStart.Start();
-        var services = new ServiceCollection();
-        var config = new JobConfiguration
-        {
-            ServiceCollection = services,
-        };
-        config.UsePostgreSQL(connString);
-        services.AddLogging();
-        services.AddSingleton(_ => config);
-        var sp = services.BuildServiceProvider();
+        var sp = await AddTestsServices(postgresStart);
         var jobStorage = sp.GetRequiredService<IJobStorage>();
         await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
         await Assert.That(() => jobStorage.GetLatestJobs(1, 15)).IsEmpty();

@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Dapper;
+using KuliJob.Internals;
 using KuliJob.Storages;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -9,7 +10,8 @@ namespace KuliJob.Postgres;
 
 internal class PostgresJobStorage(
     PgDataSource dataSource,
-    JobConfiguration configuration) : IJobStorage
+    JobConfiguration configuration,
+    MyClock myClock) : IJobStorage
 {
     readonly string schema = dataSource.Schema;
 
@@ -62,7 +64,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
-            now = DateTimeOffset.UtcNow,
+            now = myClock.GetUtcNow(),
         });
     }
 
@@ -79,7 +81,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
-            now = DateTimeOffset.UtcNow,
+            now = myClock.GetUtcNow(),
         });
     }
 
@@ -98,7 +100,7 @@ internal class PostgresJobStorage(
         {
             id = jobId,
             failedMessage,
-            now = DateTimeOffset.UtcNow,
+            now = myClock.GetUtcNow(),
         });
     }
 
@@ -130,7 +132,7 @@ internal class PostgresJobStorage(
         returning job.*
         """, new
         {
-            now = DateTimeOffset.UtcNow,
+            now = myClock.GetUtcNow(),
         });
         return nextJob?.ToJobInput();
     }
@@ -144,7 +146,7 @@ internal class PostgresJobStorage(
         """, new
         {
             id = jobId,
-            now = DateTimeOffset.UtcNow,
+            now = myClock.GetUtcNow(),
         });
         var jobInput = result?.ToJobInput();
         return jobInput;

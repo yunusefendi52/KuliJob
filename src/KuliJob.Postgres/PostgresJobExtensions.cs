@@ -11,11 +11,11 @@ public static class PostgresJobExtension
     public static void UsePostgreSQL(
         this JobConfiguration jobConfiguration,
         string connectionString,
-        string schema = "kulijob",
+        string? schema = null,
         Logging.ILoggerFactory? loggerFactory = null)
     {
         var services = jobConfiguration.ServiceCollection;
-        services.AddSingleton(_ => new PgDataSource(connectionString, schema));
+        services.AddSingleton(_ => new PgDataSource(connectionString, schema ?? "kulijob"));
         services.TryAddSingleton<PostgresJobStorage>();
         services.TryAddSingleton<IJobStorage>(sp =>
         {

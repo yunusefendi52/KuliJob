@@ -18,6 +18,7 @@ public static class JobExtensions
             JobFactory = jobFactory,
         };
         configure?.Invoke(config);
+        serviceCollection.AddSingleton<MyClock>();
         serviceCollection.AddSingleton(config);
         serviceCollection.AddSingleton<JobServerScheduler>();
         serviceCollection.AddSingleton<IJobScheduler>(sp => sp.GetRequiredService<JobServerScheduler>());
