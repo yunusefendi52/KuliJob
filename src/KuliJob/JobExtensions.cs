@@ -27,6 +27,10 @@ public static class JobExtensions
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());
         serviceCollection.AddSingleton<ExpressionSerializer>();
         config.AddKuliJob<ExprJob>("expr_job");
+        config.AddKuliJob<CronJobHandler>();
+        serviceCollection.AddSingleton<ICronJob, CronJob>();
+        serviceCollection.AddSingleton<CronJobHostedService>();
+        serviceCollection.AddHostedService(static sp => sp.GetRequiredService<CronJobHostedService>());
     }
 
     public static void AddKuliJob<T>(this JobConfiguration configuration, string? jobName = null) where T : class, IJob

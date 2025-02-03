@@ -242,6 +242,21 @@ internal class PostgresJobStorage(
     {
         return ValueTask.CompletedTask;
     }
+
+    public Task AddOrUpdateCron(Cron cron)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IEnumerable<Cron>> GetCrons()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task DeleteCron(Cron cron)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 internal class PostgresJobInput

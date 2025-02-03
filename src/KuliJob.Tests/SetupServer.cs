@@ -70,7 +70,9 @@ public class SetupServer : IAsyncDisposable
         var sp = services.BuildServiceProvider();
         var jobService = sp.GetRequiredService<JobServiceHosted>();
         var jobScheduler = sp.GetRequiredService<IJobScheduler>();
+        var cronScheduler = sp.GetRequiredService<CronJobHostedService>();
         await jobService.StartAsync(default);
+        await cronScheduler.StartAsync(default);
         await jobScheduler.IsStarted;
         return new()
         {

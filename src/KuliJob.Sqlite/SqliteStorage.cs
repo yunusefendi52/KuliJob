@@ -18,6 +18,7 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
     public Task StartStorage(CancellationToken cancellationToken)
     {
         db.CreateTable<SqliteJobInput>();
+        db.CreateTable<CronSqlite>();
         return Task.CompletedTask;
     }
 
@@ -155,6 +156,27 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
             throw new ArgumentException($"Failed to retry job {jobInput.Id}");
         }
         return Task.FromResult(jobInput.ToJobInput());
+    }
+
+    public Task AddOrUpdateCron(Cron cron)
+    {
+        var cronSqlite = cron.ToCronSqlite();
+        db.InsertOrReplace(cronSqlite);
+        return Task.CompletedTask;
+    }
+
+    public Task<IEnumerable<Cron>> GetCrons()
+    {
+        var cronsSqlite = db.Table<CronSqlite>()
+            .ToList()
+            .Select(v => v.ToCron());
+        return Task.FromResult(cronsSqlite);
+    }
+
+    public Task DeleteCron(Cron cron)
+    {
+        db.Delete<CronSqlite>(cron.Name);
+        return Task.CompletedTask;
     }
 
     public ValueTask DisposeAsync()

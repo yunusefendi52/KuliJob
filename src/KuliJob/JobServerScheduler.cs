@@ -10,6 +10,7 @@ public class JobConfiguration
 {
     public int Worker { get; set; } = Environment.ProcessorCount * 2;
     public int MinPollingIntervalMs { get; set; } = 500;
+    public int MinCronPollingIntervalMs { get; set; } = 60_000;
     /// <summary>
     /// Specify job which queue execute on, default queue is "default"
     /// </summary>

@@ -13,4 +13,8 @@ public interface IJobStorage : IAsyncDisposable
     Task StartStorage(CancellationToken cancellationToken = default);
     Task ResumeJob(string jobId);
     Task<Job> RetryJob(string jobId, int retryDelay);
+
+    Task AddOrUpdateCron(Cron cron);
+    Task<IEnumerable<Cron>> GetCrons();
+    Task DeleteCron(Cron cron);
 }
