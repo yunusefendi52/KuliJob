@@ -37,7 +37,8 @@ internal class PostgresJobStorage(
             failed_message text,
             created_on timestamp with time zone not null,
             queue text not null default 'default',
-            priority smallint not null default(0)
+            priority smallint not null default(0),
+            server_name text
         );
         create index if not exists job_name_idx on {schema}.job (name);
         create index if not exists job_name_id_idx on {schema}.job (name, id);
@@ -126,13 +127,15 @@ internal class PostgresJobStorage(
         update {schema}.job job
         set
             state = '{(int)JobState.Active}',
-            started_on = @now
+            started_on = @now,
+            server_name = @serverName
         from locked_job
         where job.id = locked_job.id
         returning job.*
         """, new
         {
             now = myClock.GetUtcNow(),
+            serverName = configuration.ServerName,
         });
         return nextJob?.ToJobInput();
     }
@@ -201,6 +204,7 @@ internal class PostgresJobStorage(
         command.Parameters.AddWithValue("@created_on", jobInput.CreatedOn);
         command.Parameters.AddWithValue("@queue", NpgsqlTypes.NpgsqlDbType.Text, jobInput.Queue!);
         command.Parameters.AddWithValue("@priority", jobInput.Priority);
+        command.Parameters.AddWithValue("@server_name", jobInput.Priority);
         var rows = await command.ExecuteNonQueryAsync();
     }
 
@@ -241,48 +245,5 @@ internal class PostgresJobStorage(
     public ValueTask DisposeAsync()
     {
         return ValueTask.CompletedTask;
-    }
-}
-
-internal class PostgresJobInput
-{
-    public Guid id { get; set; }
-    public string name { get; set; } = null!;
-    public string data { get; set; } = null!;
-    public JobState state { get; set; }
-    public DateTimeOffset start_after { get; set; }
-    public DateTimeOffset? started_on { get; set; }
-    public DateTimeOffset? completed_on { get; set; }
-    public DateTimeOffset? cancelled_on { get; set; }
-    public DateTimeOffset? failed_on { get; set; }
-    public string? failed_message { get; set; }
-    public DateTimeOffset created_on { get; set; }
-    public int retry_max_count { get; set; }
-    public int retry_count { get; set; }
-    public int retry_delay { get; set; }
-    public short priority { get; set; }
-    public string? queue { get; set; }
-
-    public Job ToJobInput()
-    {
-        return new()
-        {
-            Id = id.ToString(),
-            JobName = name,
-            JobState = state,
-            JobData = data,
-            CancelledOn = cancelled_on,
-            CompletedOn = completed_on,
-            CreatedOn = created_on,
-            FailedMessage = failed_message,
-            FailedOn = failed_on,
-            RetryCount = retry_count,
-            RetryDelayMs = retry_delay,
-            RetryMaxCount = retry_max_count,
-            StartAfter = start_after,
-            StartedOn = started_on,
-            Priority = priority,
-            Queue = queue,
-        };
     }
 }

@@ -18,6 +18,7 @@ public class JobConfiguration
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal IServiceCollection ServiceCollection { get; init; } = null!;
     internal JobFactory JobFactory { get; init; } = null!;
+    internal string ServerName { get; } = Environment.MachineName;
 }
 
 internal class JobServerScheduler(
