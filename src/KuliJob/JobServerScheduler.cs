@@ -1,25 +1,8 @@
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using KuliJob.Storages;
 
 namespace KuliJob;
-
-public class JobConfiguration
-{
-    public int Worker { get; set; } = Environment.ProcessorCount * 2;
-    public int MinPollingIntervalMs { get; set; } = 500;
-    /// <summary>
-    /// Specify job which queue execute on, default queue is "default"
-    /// </summary>
-    public string[] Queues { get; set; } = ["default"];
-
-    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    internal IServiceCollection ServiceCollection { get; init; } = null!;
-    internal JobFactory JobFactory { get; init; } = null!;
-    internal string ServerName { get; } = Environment.MachineName;
-}
 
 internal class JobServerScheduler(
     ILogger<JobServerScheduler> logger,
