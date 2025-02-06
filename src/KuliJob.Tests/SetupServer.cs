@@ -43,6 +43,7 @@ public class SetupServer : IAsyncDisposable
         services.AddLogging();
         services.AddKuliJob(v =>
         {
+            v.MinPollingIntervalMs = 500;
             config?.Invoke(v);
             // v.JobTimeoutMs = 450;
             v.AddKuliJob<HandlerJob>("handler_job");
