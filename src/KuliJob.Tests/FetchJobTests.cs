@@ -23,6 +23,7 @@ public class FetchJobTests : BaseTest
         var job3 = jobs![3];
         await Assert.That(job3!.JobState).IsEqualTo(JobState.Created);
         await Assert.That(job3!.StartedOn).IsNull();
-        await Verify(jobs);
+        await Verify(jobs)
+            .IgnoreMember<Job>(v => v.ServerName);
     }
 }

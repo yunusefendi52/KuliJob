@@ -36,4 +36,5 @@ public class Job
     public int RetryDelayMs { get; set; }
     public int Priority { get; set; }
     public string? Queue { get; set; }
+    public string? ServerName { get; set; }
 }

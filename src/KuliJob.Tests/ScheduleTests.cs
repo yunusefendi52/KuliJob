@@ -17,6 +17,7 @@ public class ScheduleTests : BaseTest
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job!.CompletedOn).IsNotNull();
+        await Assert.That(job!.ServerName).IsEqualTo(Environment.MachineName);
     }
 
     [Test]
