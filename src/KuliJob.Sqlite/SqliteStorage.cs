@@ -185,4 +185,27 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
         db.Dispose();
         return ValueTask.CompletedTask;
     }
+
+    public async Task<Job?> GetJobByThrottle(string throttleKey, TimeSpan? throttleTime)
+    {
+        await Task.Yield();
+        var jobInput = db.Table<SqliteJobInput>()
+            .SingleOrDefault(v => v.ThrottleKey == throttleKey);
+        if (jobInput is null)
+        {
+            return null;
+        }
+        if (throttleTime is not null)
+        {
+            var throttleOn = jobInput.CreatedOn.Add(throttleTime.Value);
+            var now = myClock.GetUtcNow();
+            var delta = now - throttleOn;
+            if (delta.TotalMilliseconds >= 0)
+            {
+                return null;
+            }
+        }
+
+        return jobInput.ToJobInput();
+    }
 }

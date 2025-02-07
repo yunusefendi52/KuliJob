@@ -72,7 +72,7 @@ public class ScheduleTests : BaseTest
         var Services = ss.Services;
         var JobScheduler = ss.JobScheduler;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var txtFile = Path.GetTempFileName();
+        var txtFile = TestUtils.GetTempFile();
         var jobId = await JobScheduler.ScheduleJobNow("check_data_handler_job", new()
         {
             { "txtFile", txtFile },

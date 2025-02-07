@@ -28,7 +28,7 @@ public class ExpressionSerializerTests
         var services = new ServiceCollection();
         var sp = services.BuildServiceProvider();
         var serializer = new ExpressionSerializer(sp);
-        var tmp = Path.GetTempFileName();
+        var tmp = TestUtils.GetTempFile();
         var value = 50_000;
         var boolValue = true;
         string? nullValue = null;

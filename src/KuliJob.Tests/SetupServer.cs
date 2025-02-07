@@ -30,7 +30,7 @@ public class SetupServer : IAsyncDisposable
         }
         else if (ModuleInitializer.K_TestStorage == KTestType.Sqlite)
         {
-            connString = Path.GetTempFileName();
+            connString = TestUtils.GetTempFile();
             Dispose = () =>
             {
                 File.Delete(connString);

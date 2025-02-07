@@ -30,6 +30,10 @@ internal class SqliteJobInput
     [MaxLength(32)]
     public string? Queue { get; set; }
     public string? ServerName { get; set; }
+    [MaxLength(60)]
+    [Indexed]
+    public string? ThrottleKey { get; set; }
+    public int ThrottleSeconds { get; set; }
 }
 
 internal static class JobInputMapper
@@ -55,6 +59,8 @@ internal static class JobInputMapper
             Priority = sqliteJobInput.Priority,
             Queue = sqliteJobInput.Queue,
             ServerName = sqliteJobInput.ServerName,
+            ThrottleKey = sqliteJobInput.ThrottleKey,
+            ThrottleSeconds = sqliteJobInput.ThrottleSeconds,
         };
     }
 
@@ -79,6 +85,8 @@ internal static class JobInputMapper
             Priority = jobInput.Priority,
             Queue = jobInput.Queue,
             ServerName = jobInput.ServerName,
+            ThrottleKey = jobInput.ThrottleKey,
+            ThrottleSeconds = jobInput.ThrottleSeconds,
         };
     }
 }

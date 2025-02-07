@@ -4,5 +4,10 @@ namespace KuliJob;
 
 public interface ICronJob
 {
-    Task AddOrUpdate<T>(Expression<Func<T, Task>> expression, string cronName, string cronExpression, string? timezone = null);
+    Task AddOrUpdate<T>(Expression<Func<T, Task>> expression, string cronName, string cronExpression, CronOption? cronOption = null);
+}
+
+public class CronOption
+{
+    public string? Timezone { get; set; }
 }

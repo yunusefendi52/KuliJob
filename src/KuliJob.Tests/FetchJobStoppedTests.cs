@@ -8,7 +8,7 @@ public class FetchJobStoppedTests : BaseTest
     [Test]
     public async Task Should_Not_Deleted_Scheduled_Job()
     {
-        var sqliteTmp = Path.GetTempFileName();
+        var sqliteTmp = TestUtils.GetTempFile();
         var scheduleAt = DateTimeOffset.UtcNow.AddMinutes(5);
         var jobId = "";
         {
@@ -39,7 +39,7 @@ public class FetchJobStoppedTests : BaseTest
     [Test]
     public async Task Should_Process_Scheduled_Job_After_Server_Stopped()
     {
-        var sqliteTmp = Path.GetTempFileName();
+        var sqliteTmp = TestUtils.GetTempFile();
         var jobId = "";
         {
             await using var ss = await SetupServer.Start(config: v =>

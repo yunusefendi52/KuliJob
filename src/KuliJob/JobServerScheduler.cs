@@ -36,6 +36,8 @@ internal class JobServerScheduler(
     public async Task<string> ScheduleJob(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
     {
         var jobData = serializer.Serialize(data);
+        var throttleKey = scheduleOptions.HasValue ? scheduleOptions.Value.ThrottleKey : null;
+        var throttleTime = scheduleOptions.HasValue && scheduleOptions.Value.ThrottleTime.HasValue ? scheduleOptions.Value.ThrottleTime.Value : TimeSpan.Zero;
         var jobInput = new Job
         {
             JobName = jobName,
@@ -45,7 +47,17 @@ internal class JobServerScheduler(
             RetryDelayMs = scheduleOptions.HasValue ? scheduleOptions.Value.RetryDelayMs : 0,
             Priority = scheduleOptions.HasValue ? scheduleOptions.Value.Priority : 0,
             Queue = string.IsNullOrWhiteSpace(scheduleOptions?.Queue) ? "default" : scheduleOptions.Value.Queue,
+            ThrottleKey = throttleKey,
+            ThrottleSeconds = (int)throttleTime.TotalSeconds,
         };
+        if (!string.IsNullOrEmpty(throttleKey))
+        {
+            var prevJobThrottle = await storage.GetJobByThrottle(throttleKey, throttleTime);
+            if (prevJobThrottle is not null)
+            {
+                return string.Empty;
+            }
+        }
         await storage.InsertJob(jobInput);
         return jobInput.Id;
     }

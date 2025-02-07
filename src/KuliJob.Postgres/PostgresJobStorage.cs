@@ -38,7 +38,9 @@ internal class PostgresJobStorage(
             created_on timestamp with time zone not null,
             queue text not null default 'default',
             priority smallint not null default(0),
-            server_name text
+            server_name text,
+            throttle_key text,
+            throttle_seconds int
         );
         create index if not exists job_name_idx on {schema}.job (name);
         create index if not exists job_name_id_idx on {schema}.job (name, id);
@@ -258,6 +260,11 @@ internal class PostgresJobStorage(
     }
 
     public Task DeleteCron(Cron cron)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<Job?> GetJobByThrottle(string throttleKey, TimeSpan? throttleTime)
     {
         throw new NotImplementedException();
     }

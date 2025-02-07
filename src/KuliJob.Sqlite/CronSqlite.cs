@@ -14,7 +14,7 @@ public class CronSqlite
     [Column("data")]
     public string Data { get; set; } = null!;
     [Column("timezone")]
-    public string Timezone { get; set; } = null!;
+    public string? Timezone { get; set; }
     [Column("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
     [Column("updated_at")]

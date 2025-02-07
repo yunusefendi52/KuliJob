@@ -37,4 +37,6 @@ public class Job
     public int Priority { get; set; }
     public string? Queue { get; set; }
     public string? ServerName { get; set; }
+    public string? ThrottleKey { get; set; }
+    public int ThrottleSeconds { get; set; }
 }

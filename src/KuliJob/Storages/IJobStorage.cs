@@ -4,6 +4,7 @@ public interface IJobStorage : IAsyncDisposable
 {
     // Task<JobInput?> GetJobByState(string jobId, JobState jobState);
     Task<Job?> GetJobById(string jobId);
+    Task<Job?> GetJobByThrottle(string throttleKey, TimeSpan? throttleTime);
     Task<IEnumerable<Job>> GetLatestJobs(int page, int limit, JobState? jobState = null);
     Task CancelJobById(string jobId);
     Task CompleteJobById(string jobId);

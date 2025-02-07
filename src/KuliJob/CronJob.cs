@@ -8,10 +8,10 @@ internal class CronJob(
     IJobStorage jobStorage,
     ExpressionSerializer expressionSerializer) : ICronJob
 {
-    public async Task AddOrUpdate<T>(Expression<Func<T, Task>> expression, string cronName, string cronExpression, string? timezone = null)
+    public async Task AddOrUpdate<T>(Expression<Func<T, Task>> expression, string cronName, string cronExpression, CronOption? cronOption = null)
     {
         var expr = expressionSerializer.FromExpr(expression);
-        timezone ??= DateTimeZoneProviders.Tzdb.GetSystemDefault().Id;
+        var timezone = cronOption?.Timezone;
         await jobStorage.AddOrUpdateCron(new()
         {
             Name = cronName,
