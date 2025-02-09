@@ -48,7 +48,7 @@ public class ScheduleTests : BaseTest
         await WaitJobTicks();
         var jobCreated = await jobStorage.GetJobById(jobId);
         await Assert.That(jobCreated).IsNotNull();
-        await Assert.That(jobCreated!.StartAfter).IsEqualTo(startAfter);
+        await Assert.That(jobCreated!.StartAfter.ToUnixTimeMilliseconds()).IsEqualTo(startAfter.ToUnixTimeMilliseconds());
         await Assert.That(jobCreated!.JobState).IsEqualTo(JobState.Created);
 
         await JobScheduler.CancelJob(jobId);
