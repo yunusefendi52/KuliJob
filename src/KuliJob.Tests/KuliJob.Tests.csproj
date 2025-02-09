@@ -26,7 +26,7 @@
     <PackageReference Include="ReportGenerator" Version="5.4.3" />
     <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.10" />
-    <PackageReference Include="TUnit.Assertions" Version="0.6.100" />
+    <PackageReference Include="TUnit.Assertions" Version="0.11.0" />
     <PackageReference Include="Verify.NUnit" Version="28.9.0" />
   </ItemGroup>
 
