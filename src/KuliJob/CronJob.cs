@@ -6,18 +6,23 @@ namespace KuliJob;
 
 internal class CronJob(
     IJobStorage jobStorage,
-    ExpressionSerializer expressionSerializer) : ICronJob
+    ExpressionSerializer expressionSerializer,
+    Serializer serializer) : ICronJob
 {
     public async Task AddOrUpdate<T>(Expression<Func<T, Task>> expression, string cronName, string cronExpression, CronOption? cronOption = null)
     {
         var expr = expressionSerializer.FromExpr(expression);
-        var timezone = cronOption?.Timezone;
+        var data = serializer.Serialize(new
+        {
+            expr,
+        });
+        var timezone = cronOption?.TimeZoneId;
         await jobStorage.AddOrUpdateCron(new()
         {
             Name = cronName,
-            Data = expr,
+            Data = data,
             CronExpression = cronExpression,
-            Timezone = timezone,
+            TimeZone = timezone,
         });
     }
 }

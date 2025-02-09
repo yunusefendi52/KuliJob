@@ -443,6 +443,49 @@ public class PostgresJobStorageTests : BaseTest
         await Assert.That(() => jobStorage.GetLatestJobs(1, 15)).HasCount().EqualTo(2);
         await Assert.That(() => jobStorage.GetLatestJobs(1, 15, JobState.Active)).HasCount().EqualTo(1);
     }
+
+    [Test]
+    public async Task Can_Get_Empty_Crons()
+    {
+        await using var postgresStart = new PostgresStart();
+        var sp = await AddTestsServices(postgresStart);
+        var jobStorage = sp.GetRequiredService<IJobStorage>();
+        await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
+        var crons = await Assert.That(() => jobStorage.GetCrons()).ThrowsNothing();
+        await Assert.That(crons).IsEmpty();
+    }
+
+    [Test]
+    public async Task Can_Get_And_Delete_Crons()
+    {
+        await using var postgresStart = new PostgresStart();
+        var sp = await AddTestsServices(postgresStart);
+        var jobStorage = sp.GetRequiredService<IJobStorage>();
+        await Assert.That(() => jobStorage.StartStorage()).ThrowsNothing();
+        await jobStorage.AddOrUpdateCron(new Cron
+        {
+            Name = "my_cron",
+            CronExpression = "* * * * *",
+            Data = "",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        });
+        await jobStorage.AddOrUpdateCron(new Cron
+        {
+            Name = "my_cron",
+            CronExpression = "* 30 * * *",
+            Data = "2",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        });
+        var crons = await Assert.That(() => jobStorage.GetCrons()).ThrowsNothing();
+        await Assert.That(crons).HasCount().EqualToOne();
+        var cron = crons!.Single();
+        await Assert.That(cron.Name).IsEqualTo("my_cron");
+        await Assert.That(cron.CronExpression).IsEqualTo("* 30 * * *");
+        await Assert.That(cron.Data).IsEqualTo("2");
+        await Assert.That(() => jobStorage.DeleteCron("my_cron")).ThrowsNothing();
+    }
 }
 
 public static class AsyncEnumerableExtensions

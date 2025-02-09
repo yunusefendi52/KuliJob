@@ -9,5 +9,5 @@ public interface ICronJob
 
 public class CronOption
 {
-    public string? Timezone { get; set; }
+    public string? TimeZoneId { get; set; }
 }

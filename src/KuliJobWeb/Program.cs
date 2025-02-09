@@ -1,11 +1,15 @@
+using KuliJobWeb;
 using KuliJobWeb.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddLogging();
 
 builder.Services.AddHttpClient();
 
 builder.Services.AddKuliJob(v =>
 {
+    v.MinCronPollingIntervalMs = 500;
     // v.UsePostgreSQL("Host=localhost;Username=postgres;Password=postgres;Database=KuliJobWeb;Include Error Detail=True");
     v.UseSqlite("kulijob.db");
 
@@ -13,6 +17,8 @@ builder.Services.AddKuliJob(v =>
 });
 // builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
 builder.AddKuliJobDashboard();
+
+builder.Services.AddHostedService<MyHostedService>();
 
 var app = builder.Build();
 

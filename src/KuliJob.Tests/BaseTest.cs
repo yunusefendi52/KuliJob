@@ -9,6 +9,6 @@ public class BaseTest
     
     public static async Task WaitCronTicks(int count = 1)
     {
-        await Task.Delay(550 * count);
+        await Task.Delay(1050 * count);
     }
 }

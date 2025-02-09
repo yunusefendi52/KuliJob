@@ -9,8 +9,8 @@ public class JobConfiguration
     /// <summary>
     /// Specify job which queue execute on, default queue is "default"
     /// </summary>
-    public string[] Queues { get; set; } = ["default"];
-    public int MinCronPollingIntervalMs { get; set; } = 55_000;
+    public List<string> Queues { get; set; } = ["default"];
+    public int MinCronPollingIntervalMs { get; set; } = 15_000;
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal IServiceCollection ServiceCollection { get; init; } = null!;
     internal JobFactory JobFactory { get; init; } = null!;

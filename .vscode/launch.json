@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/KuliJobWeb/bin/Debug/net8.0/KuliJobWeb.dll",
+            "program": "${workspaceFolder}/src/KuliJobWeb/bin/Debug/net6.0/KuliJobWeb.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/KuliJobWeb",
             "console": "internalConsole",

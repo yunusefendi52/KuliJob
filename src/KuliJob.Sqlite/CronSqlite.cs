@@ -31,7 +31,7 @@ internal static class CronSqliteMapper
             CronExpression = cronSqlite.CronExpression,
             Data = cronSqlite.Data,
             Name = cronSqlite.Name,
-            Timezone = cronSqlite.Timezone,
+            TimeZone = cronSqlite.Timezone,
             CreatedAt = cronSqlite.CreatedAt,
             UpdatedAt = cronSqlite.UpdatedAt,
         };
@@ -45,7 +45,7 @@ internal static class CronSqliteMapper
             CronExpression = cron.CronExpression,
             Data = cron.Data,
             Name = cron.Name,
-            Timezone = cron.Timezone,
+            Timezone = cron.TimeZone,
             UpdatedAt = cron.UpdatedAt,
         };
     }
