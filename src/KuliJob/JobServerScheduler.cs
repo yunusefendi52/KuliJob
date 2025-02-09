@@ -10,7 +10,9 @@ internal class JobServerScheduler(
     IJobStorage storage,
     JobConfiguration configuration,
     Serializer serializer,
-    ExpressionSerializer expressionSerializer) : IJobScheduler, IAsyncDisposable
+    ExpressionSerializer expressionSerializer,
+    MyClock myClock,
+    CronJobHostedService cronJobHostedService) : IJobScheduler, IAsyncDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 
@@ -22,8 +24,8 @@ internal class JobServerScheduler(
     {
         await storage.StartStorage(cancellation.Token);
         logger.LogInformation("🔄 Job scheduler started");
-        isStarted.SetResult(); ;
-        await ProcessQueueAsync(cancellation.Token);
+        isStarted.SetResult();
+        await Task.WhenAll(cronJobHostedService.ProcessCron(cancellation.Token), ProcessQueueAsync(cancellation.Token));
     }
 
     public ValueTask DisposeAsync()
@@ -36,6 +38,8 @@ internal class JobServerScheduler(
     public async Task<string> ScheduleJob(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
     {
         var jobData = serializer.Serialize(data);
+        var throttleKey = scheduleOptions.HasValue ? scheduleOptions.Value.ThrottleKey : null;
+        var throttleTime = scheduleOptions.HasValue && scheduleOptions.Value.ThrottleTime.HasValue ? scheduleOptions.Value.ThrottleTime.Value : TimeSpan.Zero;
         var jobInput = new Job
         {
             JobName = jobName,
@@ -45,6 +49,8 @@ internal class JobServerScheduler(
             RetryDelayMs = scheduleOptions.HasValue ? scheduleOptions.Value.RetryDelayMs : 0,
             Priority = scheduleOptions.HasValue ? scheduleOptions.Value.Priority : 0,
             Queue = string.IsNullOrWhiteSpace(scheduleOptions?.Queue) ? "default" : scheduleOptions.Value.Queue,
+            ThrottleKey = throttleKey,
+            ThrottleSeconds = (int)throttleTime.TotalSeconds,
         };
         await storage.InsertJob(jobInput);
         return jobInput.Id;

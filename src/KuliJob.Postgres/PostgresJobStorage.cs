@@ -22,7 +22,7 @@ internal class PostgresJobStorage(
         start transaction;
         create schema if not exists {schema};
         create table if not exists {schema}.job  (
-            id uuid not null,
+            id uuid not null primary key,
             name text not null,
             data jsonb,
             state smallint not null default(0),
@@ -38,7 +38,9 @@ internal class PostgresJobStorage(
             created_on timestamp with time zone not null,
             queue text not null default 'default',
             priority smallint not null default(0),
-            server_name text
+            server_name text,
+            throttle_key text,
+            throttle_seconds int
         );
         create index if not exists job_name_idx on {schema}.job (name);
         create index if not exists job_name_id_idx on {schema}.job (name, id);
@@ -48,6 +50,16 @@ internal class PostgresJobStorage(
         alter table {schema}.job add if not exists priority smallint not null default(0);
         create index if not exists job_priority_created_on_id_idx on {schema}.job (priority, created_on, id);
         create index if not exists job_priority_created_on_id_queue_idx on {schema}.job (priority, created_on, id, queue);
+
+        -- CRON
+        create table if not exists {schema}.cron (
+            name text not null primary key,
+            cron_expression text not null,
+            data text not null,
+            timezone text,
+            created_at timestamp with time zone not null,
+            updated_at timestamp with time zone not null
+        );
         commit;
         """);
     }
@@ -187,9 +199,11 @@ internal class PostgresJobStorage(
             start_after,
             created_on,
             queue,
-            priority
+            priority,
+            throttle_key,
+            throttle_seconds
         )
-        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue, @priority)
+        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue, @priority, @throttle_key, @throttle_seconds)
         """;
         await using var conn = await dataSource.OpenConnectionAsync();
         await using var command = new NpgsqlCommand(commandText, conn);
@@ -205,7 +219,13 @@ internal class PostgresJobStorage(
         command.Parameters.AddWithValue("@queue", NpgsqlTypes.NpgsqlDbType.Text, jobInput.Queue!);
         command.Parameters.AddWithValue("@priority", jobInput.Priority);
         command.Parameters.AddWithValue("@server_name", jobInput.Priority);
+        command.Parameters.AddWithValue("@throttle_key", !string.IsNullOrEmpty(jobInput.ThrottleKey) ? jobInput.ThrottleKey! : DBNull.Value);
+        command.Parameters.AddWithValue("@throttle_seconds", jobInput.ThrottleSeconds);
         var rows = await command.ExecuteNonQueryAsync();
+        if (rows <= 0)
+        {
+            throw new Exception($"Job not added {jobInput.Id} - {jobInput.JobName}");
+        }
     }
 
     public async Task ResumeJob(string jobId)
@@ -245,5 +265,85 @@ internal class PostgresJobStorage(
     public ValueTask DisposeAsync()
     {
         return ValueTask.CompletedTask;
+    }
+
+    public async Task AddOrUpdateCron(Cron cron)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync();
+        var now = DateTimeOffset.UtcNow;
+        await conn.QuerySingleAsync($"""
+        INSERT INTO {schema}.cron(
+            name,
+            cron_expression,
+            data,
+            timezone,
+            created_at,
+            updated_at
+        )
+        VALUES
+            (@name, @cron_expression, @data, @timezone, @now, @now)
+        ON CONFLICT (name) DO UPDATE SET
+            cron_expression = EXCLUDED.cron_expression,
+            data = EXCLUDED.data,
+            timezone = EXCLUDED.timezone,
+            updated_at = EXCLUDED.updated_at
+        RETURNING 1;
+        """, new
+        {
+            name = cron.Name,
+            cron_expression = cron.CronExpression,
+            data = cron.Data,
+            timezone = cron.TimeZone,
+            now,
+        });
+    }
+
+    public async Task<IEnumerable<Cron>> GetCrons()
+    {
+        await using var conn = await dataSource.OpenConnectionAsync();
+        var list = await conn.QueryAsync($"""
+        select * from {schema}.cron
+        """);
+        var real = list.Select(v =>
+        {
+            return new Cron
+            {
+                CronExpression = v.cron_expression,
+                Data = v.data,
+                Name = v.name,
+                CreatedAt = v.created_at,
+                TimeZone = v.timezone,
+                UpdatedAt = v.updated_at,
+            };
+        }).ToList();
+        return real;
+    }
+
+    public async Task DeleteCron(string name)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync();
+        await conn.QuerySingleAsync($"""
+        delete from {schema}.cron
+        where name = @name
+        returning 1
+        """, new
+        {
+            name = name,
+        });
+    }
+
+    public async Task<Job?> GetJobByThrottle(string throttleKey)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync();
+        var job = await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
+        select * from {schema}.job
+        where throttle_key = @throttle_key
+        order by created_on desc
+        limit 1
+        """, new
+        {
+            throttle_key = throttleKey,
+        });
+        return job?.ToJobInput();
     }
 }

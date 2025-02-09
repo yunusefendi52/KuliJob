@@ -1,0 +1,46 @@
+@page "/kulijob/cron"
+@using KuliJob;
+@using KuliJob.Storages;
+@inject IJobStorage jobStorage;
+
+@functions {
+    public List<Cron>? Crons { get; set; }
+
+    public async Task OnGetAsync()
+    {
+        Crons = (await jobStorage.GetCrons()).ToList();
+    }
+}
+
+@{
+    ViewData["Title"] = "Jobs";
+}
+
+<h3>Cron</h3>
+
+@if (Crons != null && Crons.Count > 0)
+{
+    <table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Schedule</th>
+            <th scope="col">Time Zone</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cron in Crons)
+            {
+                <tr>
+                    <td>@cron.Name</td>
+                    <td>@cron.CronExpression</td>
+                    <td>@(cron.TimeZone ?? "UTC")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="fs-5">You have not add cron yet.</p>
+}

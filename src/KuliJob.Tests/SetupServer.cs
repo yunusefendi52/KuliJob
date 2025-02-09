@@ -30,7 +30,7 @@ public class SetupServer : IAsyncDisposable
         }
         else if (ModuleInitializer.K_TestStorage == KTestType.Sqlite)
         {
-            connString = Path.GetTempFileName();
+            connString = TestUtils.GetTempFile();
             Dispose = () =>
             {
                 File.Delete(connString);
@@ -68,9 +68,11 @@ public class SetupServer : IAsyncDisposable
                 throw new ArgumentException("Invalid test storage");
             }
         });
+        services.AddHttpClient();
         var sp = services.BuildServiceProvider();
         var jobService = sp.GetRequiredService<JobServiceHosted>();
         var jobScheduler = sp.GetRequiredService<IJobScheduler>();
+        var cronScheduler = sp.GetRequiredService<CronJobHostedService>();
         await jobService.StartAsync(default);
         await jobScheduler.IsStarted;
         return new()

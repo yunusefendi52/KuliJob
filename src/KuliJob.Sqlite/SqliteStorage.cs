@@ -18,6 +18,7 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
     public Task StartStorage(CancellationToken cancellationToken)
     {
         db.CreateTable<SqliteJobInput>();
+        db.CreateTable<CronSqlite>();
         return Task.CompletedTask;
     }
 
@@ -158,9 +159,45 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
         return Task.FromResult(jobInput.ToJobInput());
     }
 
+    public Task AddOrUpdateCron(Cron cron)
+    {
+        var cronSqlite = cron.ToCronSqlite();
+        db.InsertOrReplace(cronSqlite);
+        return Task.CompletedTask;
+    }
+
+    public Task<IEnumerable<Cron>> GetCrons()
+    {
+        var cronsSqlite = db.Table<CronSqlite>()
+            .ToList()
+            .Select(v => v.ToCron());
+        return Task.FromResult(cronsSqlite);
+    }
+
+    public Task DeleteCron(string name)
+    {
+        db.Delete<CronSqlite>(name);
+        return Task.CompletedTask;
+    }
+
     public ValueTask DisposeAsync()
     {
         db.Dispose();
         return ValueTask.CompletedTask;
+    }
+
+    public async Task<Job?> GetJobByThrottle(string throttleKey)
+    {
+        await Task.Yield();
+        var jobInput = db.Table<SqliteJobInput>()
+            .OrderByDescending(v => v.CreatedOn)
+            .Take(1)
+            .SingleOrDefault(v => v.ThrottleKey == throttleKey);
+        if (jobInput is null)
+        {
+            return null;
+        }
+
+        return jobInput.ToJobInput();
     }
 }

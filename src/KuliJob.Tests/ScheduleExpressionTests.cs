@@ -9,7 +9,7 @@ public class ScheduleExpressionTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var tmp = Path.GetTempFileName();
+        var tmp = TestUtils.GetTempFile();
         var value = 50_000;
         var boolValue = true;
         string? nullValue = null;
@@ -33,7 +33,7 @@ public class ScheduleExpressionTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var tmp = Path.GetTempFileName();
+        var tmp = TestUtils.GetTempFile();
         var jobId = await ss.JobScheduler.ScheduleJobNow(() => ActionMethod(tmp));
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
@@ -52,7 +52,7 @@ public class ScheduleExpressionTests : BaseTest
             v.AddScoped<MyService>();
         });
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var tmp = Path.GetTempFileName();
+        var tmp = TestUtils.GetTempFile();
         var jobId = await ss.JobScheduler.ScheduleJobNow<MyService>(t => t.ActionMethodTask(tmp));
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
@@ -70,10 +70,13 @@ public class ScheduleExpressionTests : BaseTest
 
     internal class MyService
     {
-        internal Task ActionMethodTask(string filePath)
+        internal async Task ActionMethodTask(string filePath)
         {
-            File.WriteAllText(filePath, "action_method_task");
-            return Task.CompletedTask;
+            if (File.Exists(filePath))
+            {
+                throw new Exception("File exists. should not be");
+            }
+            await File.WriteAllTextAsync(filePath, "action_method_task");
         }
     }
 }

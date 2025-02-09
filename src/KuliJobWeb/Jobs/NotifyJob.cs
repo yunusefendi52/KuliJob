@@ -11,12 +11,17 @@ public class NotifyJob(
         logger.LogInformation("Start sending notification");
 
         var msg = context.JobData.GetValue<string>("msg");
-        
-        await httpClient.PostAsJsonAsync("https://webhook.site/631adca8-cc1b-4f8c-b578-1796ece2f377/notify-job", new
+
+        await CallApi(msg!);
+
+        logger.LogInformation("Notification sent");
+    }
+
+    public async Task CallApi(string msg)
+    {
+        await httpClient.PostAsJsonAsync("https://eo7ux83lmfn8pti.m.pipedream.net/notify-job", new
         {
             Message = msg,
         });
-        
-        logger.LogInformation("Notification sent");
     }
 }

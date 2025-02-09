@@ -17,8 +17,9 @@ public static class JobExtensions
             ServiceCollection = serviceCollection,
             JobFactory = jobFactory,
         };
+        config.Queues.Add("k_cron");
         configure?.Invoke(config);
-        serviceCollection.AddSingleton<MyClock>();
+        serviceCollection.TryAddSingleton<MyClock>();
         serviceCollection.AddSingleton(config);
         serviceCollection.AddSingleton<JobServerScheduler>();
         serviceCollection.AddSingleton<IJobScheduler>(sp => sp.GetRequiredService<JobServerScheduler>());
@@ -27,6 +28,9 @@ public static class JobExtensions
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());
         serviceCollection.AddSingleton<ExpressionSerializer>();
         config.AddKuliJob<ExprJob>("expr_job");
+        config.AddKuliJob<CronJobHandler>();
+        serviceCollection.AddSingleton<ICronJob, CronJob>();
+        serviceCollection.AddSingleton<CronJobHostedService>();
     }
 
     public static void AddKuliJob<T>(this JobConfiguration configuration, string? jobName = null) where T : class, IJob

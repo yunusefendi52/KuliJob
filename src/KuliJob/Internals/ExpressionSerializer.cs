@@ -21,7 +21,7 @@ internal record class MethodExprCall
     }
 }
 
-internal class ExpressionSerializer(IServiceProvider serviceProvider)
+internal class ExpressionSerializer
 {
     internal Serializer serializer = new();
 
@@ -80,13 +80,13 @@ internal class ExpressionSerializer(IServiceProvider serviceProvider)
         };
     }
 
-    public Task InvokeExpr(string expr)
+    public Task InvokeExpr(IServiceProvider serviceProvider, string expr)
     {
         var methodExprCall = serializer.Deserialize<MethodExprCall>(expr)!;
-        return InvokeExpr(methodExprCall);
+        return InvokeExpr(serviceProvider, methodExprCall);
     }
 
-    public async Task InvokeExpr(MethodExprCall methodExprCall)
+    public async Task InvokeExpr(IServiceProvider serviceProvider, MethodExprCall methodExprCall)
     {
         var declType = Type.GetType(methodExprCall.DeclType, false) ?? throw new ArgumentException($"Type not found {methodExprCall.DeclType}");
         var instance = declType.IsAbstract && declType.IsSealed ? null : ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, declType);

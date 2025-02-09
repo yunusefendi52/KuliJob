@@ -4,6 +4,7 @@ public interface IJobStorage : IAsyncDisposable
 {
     // Task<JobInput?> GetJobByState(string jobId, JobState jobState);
     Task<Job?> GetJobById(string jobId);
+    Task<Job?> GetJobByThrottle(string throttleKey);
     Task<IEnumerable<Job>> GetLatestJobs(int page, int limit, JobState? jobState = null);
     Task CancelJobById(string jobId);
     Task CompleteJobById(string jobId);
@@ -13,4 +14,8 @@ public interface IJobStorage : IAsyncDisposable
     Task StartStorage(CancellationToken cancellationToken = default);
     Task ResumeJob(string jobId);
     Task<Job> RetryJob(string jobId, int retryDelay);
+
+    Task AddOrUpdateCron(Cron cron);
+    Task<IEnumerable<Cron>> GetCrons();
+    Task DeleteCron(string name);
 }
