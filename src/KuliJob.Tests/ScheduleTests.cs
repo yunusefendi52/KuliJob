@@ -54,14 +54,14 @@ public class ScheduleTests : BaseTest
         await JobScheduler.CancelJob(jobId);
         var jobCancelled = await jobStorage.GetJobById(jobId);
         await Assert.That(jobCancelled).IsNotNull();
-        await Assert.That(jobCancelled!.StartAfter).IsEqualTo(startAfter);
+        await Assert.That(jobCancelled!.StartAfter.ToUnixTimeMilliseconds()).IsEqualTo(startAfter.ToUnixTimeMilliseconds());
         await Assert.That(jobCancelled!.CancelledOn).IsNotNull();
         await Assert.That(jobCancelled.JobState).IsEqualTo(JobState.Cancelled);
 
         await JobScheduler.ResumeJob(jobId);
         var jobResumed = await jobStorage.GetJobById(jobId);
         await Assert.That(jobResumed).IsNotNull();
-        await Assert.That(jobResumed!.StartAfter).IsEqualTo(startAfter);
+        await Assert.That(jobResumed!.StartAfter.ToUnixTimeMilliseconds()).IsEqualTo(startAfter.ToUnixTimeMilliseconds());
         await Assert.That(jobResumed!.JobState).IsEqualTo(JobState.Created);
     }
 
