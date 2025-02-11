@@ -41,7 +41,6 @@ public class CronTests : BaseTest
     }
 
     [Test]
-    [Ignore("Need more test")]
     public async Task Should_Run_2_Crons()
     {
         await using var ss = await SetupServer.Start(config: v =>
@@ -56,7 +55,7 @@ public class CronTests : BaseTest
         var secondTmp = TestUtils.GetTempFile();
         await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.IncrementTextFile(firstTmp), "inc_file_1", "* * * * *")).ThrowsNothing();
         await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.IncrementTextFile(secondTmp), "inc_file_2", "* * * * *")).ThrowsNothing();
-        await WaitCronTicks(3);
+        await WaitCronTicks(2);
         await Assert.That(() => File.ReadAllTextAsync(firstTmp)).IsEqualTo("1");
         await Assert.That(() => File.ReadAllTextAsync(secondTmp)).IsEqualTo("1");
     }

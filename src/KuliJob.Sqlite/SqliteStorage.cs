@@ -13,6 +13,7 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
     public void Init(string connectionString)
     {
         db = new(connectionString);
+        db.EnableWriteAheadLogging();
     }
 
     public Task StartStorage(CancellationToken cancellationToken)
@@ -46,7 +47,7 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
                 .ThenBy(v => v.Id)
                 .Where(v => v.JobState < JobState.Active && v.StartAfter < now && queues.Contains(v.Queue))
                 .Take(1)
-                .SingleOrDefault();
+                .FirstOrDefault();
             if (nextJob is null)
             {
                 db.Release(savePoint);
@@ -116,20 +117,15 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
         return Task.CompletedTask;
     }
 
-    // public Task<JobInput?> GetJobByState(string jobId, JobState jobState)
-    // {
-    //     return Task.FromResult(db.Table<SqliteJobInput>()
-    //         .Where(v => v.Id == jobId && v.JobState == jobState)
-    //         .Select(v => v.ToJobInput())
-    //         .SingleOrDefault());
-    // }
-
     public Task<Job?> GetJobById(string jobId)
     {
-        return Task.FromResult(db.Table<SqliteJobInput>()
+        var job = db.Table<SqliteJobInput>()
             .Where(v => v.Id == jobId)
-            .Select(v => v.ToJobInput())
-            .SingleOrDefault());
+            .Take(2)
+            .ToList()
+            .SingleOrDefault()
+            ?.ToJobInput();
+        return Task.FromResult(job);
     }
 
     public Task<IEnumerable<Job>> GetLatestJobs(int page, int limit, JobState? jobState = null)
@@ -191,8 +187,7 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
         await Task.Yield();
         var jobInput = db.Table<SqliteJobInput>()
             .OrderByDescending(v => v.CreatedOn)
-            .Take(1)
-            .SingleOrDefault(v => v.ThrottleKey == throttleKey);
+            .FirstOrDefault(v => v.ThrottleKey == throttleKey);
         if (jobInput is null)
         {
             return null;
