@@ -1,6 +1,7 @@
 using Cronos;
 using KuliJob.Internals;
 using KuliJob.Storages;
+using NSubstitute;
 
 namespace KuliJob.Tests;
 
@@ -77,5 +78,77 @@ public class CronTests : BaseTest
         var date = await Assert.That(() => DateTimeOffset.Parse(File.ReadAllText(firstTmp)).ToUniversalTime()).ThrowsNothing();
         var utcNow = DateTimeOffset.UtcNow;
         await Assert.That(() => date).IsBetween(utcNow.AddSeconds(-5), utcNow.AddSeconds(5)).WithInclusiveBounds();
+    }
+
+    [Test]
+    [TestCase("* * * * *", null, true)]
+    [TestCase("*/2 * * * *", null, false)]
+    [TestCase("*/3 * * * *", null, true)]
+    [TestCase("*/5 * * * *", "Asia/Jakarta", false)]
+    [TestCase("*/5 * * * *", null, false)]
+    [TestCase("* * */5 * *", null, false)]
+    public async Task CheckShouldSchedule_Tests(string cron, string? timeZone, bool expected)
+    {
+        var storage = Substitute.For<IJobStorage>();
+        var throttleKey = "inc";
+        storage.GetJobByThrottle(throttleKey).Returns((Job?)null);
+        var myClock = Substitute.For<MyClock>();
+        myClock.GetUtcNow().Returns(DateTimeOffset.Parse("2025-02-12T14:03:32Z"));
+        var check = await CronJobHostedService.CheckShouldSchedule(cron, timeZone, throttleKey, myClock, storage);
+        await Assert.That(check).IsEqualTo(expected);
+    }
+
+    [Test]
+    public async Task Should_Return_Null_If_Invalid_Date()
+    {
+        var storage = Substitute.For<IJobStorage>();
+        var throttleKey = "inc";
+        storage.GetJobByThrottle(throttleKey).Returns((Job?)null);
+        var myClock = Substitute.For<MyClock>();
+        myClock.GetUtcNow().Returns(DateTimeOffset.Parse("2025-02-28T00:05:32Z"));
+        var check = await CronJobHostedService.CheckShouldSchedule("0 0 */29 * *", null, throttleKey, myClock, storage);
+        await Assert.That(check).IsFalse();
+    }
+
+    [Test]
+    public async Task Should_Skip_If_Cron_Misfire_By_Default()
+    {
+        var storage = Substitute.For<IJobStorage>();
+        var throttleKey = "inc";
+        storage.GetJobByThrottle(throttleKey).Returns((Job?)null);
+        var myClock = Substitute.For<MyClock>();
+        myClock.GetUtcNow().Returns(DateTimeOffset.Parse("2025-02-10T00:05:10Z"));
+        var check = await CronJobHostedService.CheckShouldSchedule("*/10 * * * *", null, throttleKey, myClock, storage);
+        await Assert.That(check).IsFalse();
+    }
+
+    [Test]
+    public async Task Should_Not_Schedule_Cron_If_Already_Scheduled()
+    {
+        var storage = Substitute.For<IJobStorage>();
+        var throttleKey = "inc";
+        storage.GetJobByThrottle(throttleKey).Returns(new Job
+        {
+            CreatedOn = DateTimeOffset.Parse("2025-02-10T00:10:00Z"),
+        });
+        var myClock = Substitute.For<MyClock>();
+        myClock.GetUtcNow().Returns(DateTimeOffset.Parse("2025-02-10T00:10:59Z"));
+        var check = await CronJobHostedService.CheckShouldSchedule("*/10 * * * *", null, throttleKey, myClock, storage);
+        await Assert.That(check).IsFalse();
+    }
+
+    [Test]
+    public async Task Should_Schedule_Cron_If_Job_More_Than_Scheduled()
+    {
+        var storage = Substitute.For<IJobStorage>();
+        var throttleKey = "inc";
+        storage.GetJobByThrottle(throttleKey).Returns(new Job
+        {
+            CreatedOn = DateTimeOffset.Parse("2025-02-10T00:10:00Z"),
+        });
+        var myClock = Substitute.For<MyClock>();
+        myClock.GetUtcNow().Returns(DateTimeOffset.Parse("2025-02-10T00:20:00Z"));
+        var check = await CronJobHostedService.CheckShouldSchedule("*/10 * * * *", null, throttleKey, myClock, storage);
+        await Assert.That(check).IsTrue();
     }
 }

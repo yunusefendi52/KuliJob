@@ -11,7 +11,6 @@ internal class JobServerScheduler(
     JobConfiguration configuration,
     Serializer serializer,
     ExpressionSerializer expressionSerializer,
-    MyClock myClock,
     CronJobHostedService cronJobHostedService) : IJobScheduler, IAsyncDisposable
 {
     readonly CancellationTokenSource cancellation = new();

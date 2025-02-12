@@ -45,7 +45,7 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
                 .OrderBy(v => v.Priority)
                 .ThenBy(v => v.CreatedOn)
                 .ThenBy(v => v.Id)
-                .Where(v => v.JobState < JobState.Active && v.StartAfter < now && queues.Contains(v.Queue))
+                .Where(v => v.JobState < JobState.Active && v.StartAfter < now && queues.Contains(v.Queue!))
                 .Take(1)
                 .FirstOrDefault();
             if (nextJob is null)

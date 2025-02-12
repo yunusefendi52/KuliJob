@@ -2,7 +2,9 @@ using System.Globalization;
 
 namespace KuliJob.Tests;
 
+#pragma warning disable CS9113 // Parameter is unread.
 public class MyTestService(HttpClient httpClient)
+#pragma warning restore CS9113 // Parameter is unread.
 {
     public async Task WriteCurrentDate(string tmp)
     {
