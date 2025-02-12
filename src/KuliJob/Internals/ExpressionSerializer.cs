@@ -92,7 +92,7 @@ internal class ExpressionSerializer
         var instance = declType.IsAbstract && declType.IsSealed ? null : ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, declType);
         var arguments = methodExprCall.Arguments?.Select(v => HandleElementTypes(v!)).ToArray();
         var argTypes = methodExprCall.Arguments?.Select(v => Type.GetType(v!.TypeName))?.ToArray() ?? [];
-        var methodInfo = declType.GetMethod(methodExprCall.MethodName, BindingFlags.Static | BindingFlags.Instance | BindingFlags.Default | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.CreateInstance, argTypes!)
+        var methodInfo = declType.GetMethod(methodExprCall.MethodName, BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, argTypes!)
              ?? throw new ArgumentException($"Method not found {methodExprCall.MethodName} in {methodExprCall.DeclType}");
         var invoke = methodInfo.Invoke(instance, arguments)!;
         if (methodInfo.ReturnType == typeof(Task))
