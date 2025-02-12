@@ -1,7 +1,14 @@
+using System.Globalization;
+
 namespace KuliJob.Tests;
 
 public class MyTestService(HttpClient httpClient)
 {
+    public async Task WriteCurrentDate(string tmp)
+    {
+        await File.WriteAllTextAsync(tmp, DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+    }
+
     public async Task IncrementTextFile(string tmp)
     {
         if (!File.Exists(tmp))

@@ -59,4 +59,23 @@ public class CronTests : BaseTest
         await Assert.That(() => File.ReadAllTextAsync(firstTmp)).IsEqualTo("1");
         await Assert.That(() => File.ReadAllTextAsync(secondTmp)).IsEqualTo("1");
     }
+
+    [Test]
+    public async Task Should_Run_Only_At_Current_Minute()
+    {
+        await using var ss = await SetupServer.Start(config: v =>
+        {
+            v.MinCronPollingIntervalMs = 1000;
+        });
+        var cronJob = ss.Services.GetRequiredService<ICronJob>();
+        var myClock = ss.Services.GetRequiredService<MyClock>();
+        var cronScheduler = ss.Services.GetRequiredService<CronJobHostedService>();
+        var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
+        var firstTmp = TestUtils.GetTempFile();
+        await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.WriteCurrentDate(firstTmp), "write_date", "* * * * *")).ThrowsNothing();
+        await WaitCronTicks(2);
+        var date = await Assert.That(() => DateTimeOffset.Parse(File.ReadAllText(firstTmp)).ToUniversalTime()).ThrowsNothing();
+        var utcNow = DateTimeOffset.UtcNow;
+        await Assert.That(() => date).IsBetween(utcNow.AddSeconds(-5), utcNow.AddSeconds(5)).WithInclusiveBounds();
+    }
 }
