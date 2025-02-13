@@ -77,8 +77,8 @@ internal class CronJobHostedService(
                         return;
                     }
 
-                    var scheduler = sp.GetRequiredService<IJobScheduler>();
-                    await scheduler.ScheduleJobNow<CronJobHandler>(new JobDataMap
+                    var scheduler = sp.GetRequiredService<IQueueJob>();
+                    await scheduler.Enqueue<CronJobHandler>(new JobDataMap
                     {
                         { "k_cron", cron },
                     }, new()

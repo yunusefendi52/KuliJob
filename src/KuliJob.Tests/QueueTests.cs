@@ -12,7 +12,7 @@ public class QueueTests : BaseTest
             v.Queues = [];
         });
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var jobId = await ss.JobScheduler.ScheduleJobNow("handler_job");
+        var jobId = await ss.QueueJob.Enqueue("handler_job");
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job!).IsNotNull().Because("But still can schedule it");
@@ -27,8 +27,8 @@ public class QueueTests : BaseTest
             v.Queues = ["example_queue"];
         });
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var defaultJobId = await ss.JobScheduler.ScheduleJobNow("handler_job");
-        var exampleQueueJobId = await ss.JobScheduler.ScheduleJobNow("handler_job", scheduleOptions: new ScheduleOptions
+        var defaultJobId = await ss.QueueJob.Enqueue("handler_job");
+        var exampleQueueJobId = await ss.QueueJob.Enqueue("handler_job", queueOptions: new QueueOptions
         {
             Queue = "example_queue",
         });

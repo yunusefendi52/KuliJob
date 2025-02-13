@@ -7,7 +7,7 @@ public class ServiceHostedTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobService = Services.GetRequiredService<JobServiceHosted>();
         using var cts = new CancellationTokenSource();
         cts.Cancel();

@@ -13,13 +13,13 @@ public class ParallelJobsTests : BaseTest
         });
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
         var now = DateTimeOffset.UtcNow.AddMilliseconds(1);
-        var jobId1 = await ss.JobScheduler.ScheduleJob("handler_job", now);
-        var jobId2 = await ss.JobScheduler.ScheduleJob("delay_handler_job", now, new()
+        var jobId1 = await ss.QueueJob.Enqueue("handler_job", now);
+        var jobId2 = await ss.QueueJob.Enqueue("delay_handler_job", now, new JobDataMap()
         {
             { "delay", 1000 },
         });
-        var jobId3 = await ss.JobScheduler.ScheduleJob("handler_job", now);
-        var jobId4 = await ss.JobScheduler.ScheduleJob("delay_handler_job", now, new()
+        var jobId3 = await ss.QueueJob.Enqueue("handler_job", now);
+        var jobId4 = await ss.QueueJob.Enqueue("delay_handler_job", now, new JobDataMap()
         {
             { "delay", 1000 },
         });

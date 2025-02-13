@@ -1,11 +1,11 @@
 @page "/kulijob/scheduler"
 @using KuliJob;
-@inject IJobScheduler jobScheduler;
+@inject IQueueJob queueJob;
 
 @functions {
     public async Task<IActionResult> OnPostScheduleJobAsync()
     {
-        await jobScheduler.ScheduleJobNow("notify_job", new()
+        await queueJob.Enqueue("notify_job", new JobDataMap()
         {
             {"msg", "My message"},
         });

@@ -5,7 +5,7 @@ namespace KuliJob.Tests;
 public class SetupServer : IAsyncDisposable
 {
     public ServiceProvider Services { get; private set; } = null!;
-    public IJobScheduler JobScheduler { get; private set; } = null!;
+    public IQueueJob QueueJob { get; private set; } = null!;
 
     public Func<Task>? Dispose { get; private set; }
 
@@ -71,14 +71,14 @@ public class SetupServer : IAsyncDisposable
         services.AddHttpClient();
         var sp = services.BuildServiceProvider();
         var jobService = sp.GetRequiredService<JobServiceHosted>();
-        var jobScheduler = sp.GetRequiredService<IJobScheduler>();
+        var queueJob = sp.GetRequiredService<IQueueJob>();
         var cronScheduler = sp.GetRequiredService<CronJobHostedService>();
         await jobService.StartAsync(default);
-        await jobScheduler.IsStarted;
+        await queueJob.IsStarted;
         return new()
         {
             Services = sp,
-            JobScheduler = jobScheduler,
+            QueueJob = queueJob,
             Dispose = Dispose,
         };
     }

@@ -12,13 +12,13 @@ public class PriorityTests : BaseTest
             v.Worker = 2;
         });
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var scheduleIn = DateTimeOffset.UtcNow.AddMilliseconds(100);
         var jobIds = await Task.WhenAll(Enumerable.Range(0, 4).Select(v =>
         {
             var priority = v % 2;
-            return JobScheduler.ScheduleJob("delay_handler_job", scheduleIn, new()
+            return JobScheduler.Enqueue("delay_handler_job", scheduleIn, new JobDataMap()
             {
                 { "delay", 200 },
             }, new()
@@ -66,13 +66,13 @@ public class PriorityTests : BaseTest
             v.Worker = 6;
         });
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var scheduleIn = DateTimeOffset.UtcNow.AddMilliseconds(100);
         var jobIds = await Task.WhenAll(Enumerable.Range(0, 4).Select(v =>
         {
             var priority = v % 2;
-            return JobScheduler.ScheduleJob("delay_handler_job", scheduleIn, new()
+            return JobScheduler.Enqueue("delay_handler_job", scheduleIn, new()
             {
                 { "delay", 200 },
             }, new()

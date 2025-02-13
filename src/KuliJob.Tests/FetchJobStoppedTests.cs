@@ -17,8 +17,8 @@ public class FetchJobStoppedTests : BaseTest
                 v.UseSqlite(sqliteTmp);
             });
             var Services = ss.Services;
-            var JobScheduler = ss.JobScheduler;
-            jobId = await JobScheduler.ScheduleJob("handler_job", scheduleAt);
+            var JobScheduler = ss.QueueJob;
+            jobId = await JobScheduler.Enqueue("handler_job", scheduleAt);
         }
         {
             await using var ss = await SetupServer.Start(config: v =>
@@ -26,7 +26,7 @@ public class FetchJobStoppedTests : BaseTest
                 v.UseSqlite(sqliteTmp);
             });
             var Services = ss.Services;
-            var JobScheduler = ss.JobScheduler;
+            var JobScheduler = ss.QueueJob;
             var jobStorage = Services.GetRequiredService<IJobStorage>();
             var job = await jobStorage.GetJobById(jobId);
             await Assert.That(job).IsNotNull();
@@ -47,8 +47,8 @@ public class FetchJobStoppedTests : BaseTest
                 v.UseSqlite(sqliteTmp);
             });
             var Services = ss.Services;
-            var JobScheduler = ss.JobScheduler;
-            jobId = await JobScheduler.ScheduleJob("handler_job", DateTimeOffset.UtcNow.AddSeconds(1.5));
+            var JobScheduler = ss.QueueJob;
+            jobId = await JobScheduler.Enqueue("handler_job", DateTimeOffset.UtcNow.AddSeconds(1.5));
         }
         await Task.Delay(1500);
         {
@@ -58,7 +58,7 @@ public class FetchJobStoppedTests : BaseTest
             });
             await WaitJobTicks();
             var Services = ss.Services;
-            var JobScheduler = ss.JobScheduler;
+            var JobScheduler = ss.QueueJob;
             var jobStorage = Services.GetRequiredService<IJobStorage>();
             var job = await jobStorage.GetJobById(jobId);
             await Assert.That(job).IsNotNull();

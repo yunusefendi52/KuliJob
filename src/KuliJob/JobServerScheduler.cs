@@ -11,7 +11,7 @@ internal class JobServerScheduler(
     JobConfiguration configuration,
     Serializer serializer,
     ExpressionSerializer expressionSerializer,
-    CronJobHostedService cronJobHostedService) : IJobScheduler, IAsyncDisposable
+    CronJobHostedService cronJobHostedService) : IQueueJob, IAsyncDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 
@@ -34,7 +34,7 @@ internal class JobServerScheduler(
         return ValueTask.CompletedTask;
     }
 
-    public async Task<string> ScheduleJob(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, ScheduleOptions? scheduleOptions = null)
+    public async Task<string> Enqueue(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, QueueOptions? scheduleOptions = null)
     {
         var jobData = serializer.Serialize(data);
         var throttleKey = scheduleOptions.HasValue ? scheduleOptions.Value.ThrottleKey : null;
@@ -145,25 +145,25 @@ internal class JobServerScheduler(
         await storage.ResumeJob(jobId);
     }
 
-    public Task<string> ScheduleJob(Expression<Action> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    public Task<string> Enqueue(Expression<Action> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
-        return ScheduleFromExpr(expression, startAfter, scheduleOptions);
+        return EnqueueFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    public Task<string> ScheduleJob(Expression<Func<Task>> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    public Task<string> Enqueue(Expression<Func<Task>> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
-        return ScheduleFromExpr(expression, startAfter, scheduleOptions);
+        return EnqueueFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    public Task<string> ScheduleJob<T>(Expression<Func<T, Task>> expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    public Task<string> Enqueue<T>(Expression<Func<T, Task>> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
-        return ScheduleFromExpr(expression, startAfter, scheduleOptions);
+        return EnqueueFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    async Task<string> ScheduleFromExpr(LambdaExpression expression, DateTimeOffset startAfter, ScheduleOptions? scheduleOptions = null)
+    async Task<string> EnqueueFromExpr(LambdaExpression expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
         var methodArg = expressionSerializer.FromExprToObject(expression)!;
-        return await ScheduleJob("expr_job", startAfter, new JobDataMap
+        return await Enqueue("expr_job", startAfter, new JobDataMap
         {
             { "k_type", methodArg.DeclType },
             { "k_methodName", methodArg.MethodName },

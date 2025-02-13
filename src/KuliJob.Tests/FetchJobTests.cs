@@ -12,9 +12,9 @@ public class FetchJobTests : BaseTest
             v.Worker = 2;
         });
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobIds = await Task.WhenAll(Enumerable.Range(0, 5).Select(c => JobScheduler.ScheduleJobNow<DelayHandlerJob>(new JobDataMap
+        var jobIds = await Task.WhenAll(Enumerable.Range(0, 5).Select(c => JobScheduler.Enqueue<DelayHandlerJob>(new JobDataMap
         {
             { "delay", c >= 1 ? 1000 : 0 },
         })));

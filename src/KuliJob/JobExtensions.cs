@@ -22,7 +22,7 @@ public static class JobExtensions
         serviceCollection.TryAddSingleton<MyClock>();
         serviceCollection.AddSingleton(config);
         serviceCollection.AddSingleton<JobServerScheduler>();
-        serviceCollection.AddSingleton<IJobScheduler>(sp => sp.GetRequiredService<JobServerScheduler>());
+        serviceCollection.AddSingleton<IQueueJob>(sp => sp.GetRequiredService<JobServerScheduler>());
         serviceCollection.AddSingleton<JobServiceHosted>();
         serviceCollection.AddSingleton<Serializer>();
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());

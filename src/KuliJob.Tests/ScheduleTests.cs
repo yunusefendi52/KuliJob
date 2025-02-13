@@ -9,9 +9,9 @@ public class ScheduleTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("handler_job", []);
+        var jobId = await JobScheduler.Enqueue("handler_job", []);
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
@@ -25,9 +25,9 @@ public class ScheduleTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("throws_handler_job", []);
+        var jobId = await JobScheduler.Enqueue("throws_handler_job", []);
         await WaitJobTicks(2);
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
@@ -41,10 +41,10 @@ public class ScheduleTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var startAfter = DateTimeOffset.UtcNow.AddMinutes(1);
-        var jobId = await JobScheduler.ScheduleJob("handler_job", startAfter);
+        var jobId = await JobScheduler.Enqueue("handler_job", startAfter);
         await WaitJobTicks();
         var jobCreated = await jobStorage.GetJobById(jobId);
         await Assert.That(jobCreated).IsNotNull();
@@ -70,10 +70,10 @@ public class ScheduleTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var txtFile = TestUtils.GetTempFile();
-        var jobId = await JobScheduler.ScheduleJobNow("check_data_handler_job", new()
+        var jobId = await JobScheduler.Enqueue("check_data_handler_job", new JobDataMap()
         {
             { "txtFile", txtFile },
             { "myInt", int.MaxValue },
@@ -98,9 +98,9 @@ public class ScheduleTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("nonexists_handler_job", []);
+        var jobId = await JobScheduler.Enqueue("nonexists_handler_job", []);
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
@@ -112,9 +112,9 @@ public class ScheduleTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("nonexists_handler_job", []);
+        var jobId = await JobScheduler.Enqueue("nonexists_handler_job", []);
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
@@ -126,10 +126,10 @@ public class ScheduleTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow<HandlerJob>([]);
-        var jobIdThrow = await JobScheduler.ScheduleJobNow<ThrowsHandlerJob>([], new ScheduleOptions()
+        var jobId = await JobScheduler.Enqueue<HandlerJob>([]);
+        var jobIdThrow = await JobScheduler.Enqueue<ThrowsHandlerJob>([], new QueueOptions()
         {
             RetryMaxCount = 0,
         });

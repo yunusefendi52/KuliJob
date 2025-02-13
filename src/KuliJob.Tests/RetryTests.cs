@@ -9,9 +9,9 @@ public class RetryTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("conditional_throws_handler_job", new()
+        var jobId = await JobScheduler.Enqueue("conditional_throws_handler_job", new()
         {
             {"throwAtCount", 1},
         }, new()
@@ -31,9 +31,9 @@ public class RetryTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("conditional_throws_handler_job", new()
+        var jobId = await JobScheduler.Enqueue("conditional_throws_handler_job", new()
         {
             {"throwAtCount", 1},
         }, new()
@@ -54,9 +54,9 @@ public class RetryTests : BaseTest
     {
         await using var ss = await SetupServer.Start();
         var Services = ss.Services;
-        var JobScheduler = ss.JobScheduler;
+        var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
-        var jobId = await JobScheduler.ScheduleJobNow("handler_job", [], new()
+        var jobId = await JobScheduler.Enqueue("handler_job", [], new()
         {
             RetryMaxCount = 3,
         });
