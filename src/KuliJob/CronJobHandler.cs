@@ -8,7 +8,7 @@ internal class CronJobHandler : IJob
 {
     public async Task Execute(JobContext context)
     {
-        var cron = context.JobData.GetValue<Cron>("cron")!;
+        var cron = context.JobData.GetValue<Cron>("k_cron")!;
         var cronData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(cron.Data)!;
         var methodExpr = cronData["expr"].GetString();
         var expressionSerializer = context.Services.GetRequiredService<ExpressionSerializer>();

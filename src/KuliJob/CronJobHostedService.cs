@@ -80,10 +80,10 @@ internal class CronJobHostedService(
                     var scheduler = sp.GetRequiredService<IJobScheduler>();
                     await scheduler.ScheduleJobNow<CronJobHandler>(new JobDataMap
                     {
-                        { "cron", cron },
+                        { "k_cron", cron },
                     }, new()
                     {
-                        Queue = "k_cron",
+                        Queue = "k_queue_cron",
                         ThrottleKey = throttleKey,
                         ThrottleTime = throttleTime,
                     });

@@ -17,7 +17,7 @@ public static class JobExtensions
             ServiceCollection = serviceCollection,
             JobFactory = jobFactory,
         };
-        config.Queues.Add("k_cron");
+        config.Queues.Add("k_queue_cron");
         configure?.Invoke(config);
         serviceCollection.TryAddSingleton<MyClock>();
         serviceCollection.AddSingleton(config);
