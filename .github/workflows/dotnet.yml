@@ -40,6 +40,9 @@ jobs:
         }
         K_TEST_STORAGE=sqlite runTest
         K_TEST_STORAGE=pg runTest
+    - name: Pack
+      run: |
+        scripts/pack.sh
     
     - uses: actions/upload-artifact@v4
       with:

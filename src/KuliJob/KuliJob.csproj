@@ -4,13 +4,6 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageId>KuliJob</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>Yunus</Authors>
-    <Company></Company>
-    <Title>KuliJob</Title>
-    <Description>KuliJob</Description>
-    <PackageTags>kuli;kulijob;queuing;scheduling;job</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,7 +17,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
-    <PackageReference Include="NodaTime" Version="3.2.1" />
   </ItemGroup>
 
 </Project>
