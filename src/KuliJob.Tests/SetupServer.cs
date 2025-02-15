@@ -24,10 +24,6 @@ public class SetupServer : IAsyncDisposable
                 await postgresStart.DisposeAsync();
             };
         }
-        else if (ModuleInitializer.K_TestStorage == KTestType.Memory)
-        {
-            connString = ":memory:";
-        }
         else if (ModuleInitializer.K_TestStorage == KTestType.Sqlite)
         {
             connString = TestUtils.GetTempFile();
@@ -55,7 +51,7 @@ public class SetupServer : IAsyncDisposable
             v.AddKuliJob<HandlerJob>();
             v.AddKuliJob<DelayHandlerJob>();
 
-            if (ModuleInitializer.K_TestStorage == KTestType.Memory || ModuleInitializer.K_TestStorage == KTestType.Sqlite)
+            if (ModuleInitializer.K_TestStorage == KTestType.Sqlite)
             {
                 v.UseSqlite(connString);
             }

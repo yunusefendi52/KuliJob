@@ -22,7 +22,14 @@ internal class JobServerScheduler(
     public async Task Start()
     {
         await storage.StartStorage(cancellation.Token);
-        logger.LogInformation("🔄 Job scheduler started");
+        logger.LogInformation($"""
+        🔄 Job scheduler started. Configuration:
+            Server name: {configuration.ServerName}
+            Worker: {configuration.Worker}
+            Queues: {string.Join(", ", configuration.Queues)}
+            Min job polling: {configuration.MinPollingIntervalMs} ms
+            Min cron polling: {configuration.MinCronPollingIntervalMs} ms
+        """);
         isStarted.SetResult();
         await Task.WhenAll(cronJobHostedService.ProcessCron(cancellation.Token), ProcessQueueAsync(cancellation.Token));
     }

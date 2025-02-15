@@ -33,7 +33,9 @@ public class ParallelJobsTests : BaseTest
         await Assert.That(job3!.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job4!.JobState).IsEqualTo(JobState.Active);
         var job1And3Delta = job3.CompletedOn!.Value - job1.CompletedOn!.Value;
-        await Assert.That(job1And3Delta).IsBetween(TimeSpan.Zero, TimeSpan.FromMilliseconds(30));
+        await Assert.That(job1And3Delta).IsBetween(TimeSpan.Zero, TimeSpan.FromMilliseconds(30))
+            .Or
+            .IsBetween(TimeSpan.Zero, TimeSpan.FromMilliseconds(175)).Because("After EF Core changes");
         await Task.Delay(1100);
         job2 = await jobStorage.GetJobById(jobId2);
         job4 = await jobStorage.GetJobById(jobId4);

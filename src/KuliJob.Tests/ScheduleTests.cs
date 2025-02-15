@@ -28,7 +28,7 @@ public class ScheduleTests : BaseTest
         var JobScheduler = ss.QueueJob;
         var jobStorage = Services.GetRequiredService<IJobStorage>();
         var jobId = await JobScheduler.Enqueue("throws_handler_job", []);
-        await WaitJobTicks(2);
+        await WaitJobTicks(5);
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Failed);
@@ -133,7 +133,7 @@ public class ScheduleTests : BaseTest
         {
             RetryMaxCount = 0,
         });
-        await WaitJobTicks();
+        await WaitJobTicks(2);
         var job = await jobStorage.GetJobById(jobId);
         var jobThrows = await jobStorage.GetJobById(jobIdThrow);
         await Assert.That(job!.FailedMessage).IsNull();

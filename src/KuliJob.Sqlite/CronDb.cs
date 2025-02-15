@@ -1,30 +1,22 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using KuliJob.Storages;
-using SQLite;
 
 namespace KuliJob.Sqlite;
 
 [Table("cron")]
-public class CronSqlite
+public class CronDb
 {
-    [PrimaryKey]
-    [Column("name")]
     public string Name { get; set; } = null!;
-    [Column("cron_expression")]
     public string CronExpression { get; set; } = null!;
-    [Column("data")]
     public string Data { get; set; } = null!;
-    [Column("timezone")]
     public string? Timezone { get; set; }
-    [Column("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
-    [Column("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-
 internal static class CronSqliteMapper
 {
-    public static Cron ToCron(this CronSqlite cronSqlite)
+    public static Cron ToCron(this CronDb cronSqlite)
     {
         return new()
         {
@@ -37,7 +29,7 @@ internal static class CronSqliteMapper
         };
     }
 
-    public static CronSqlite ToCronSqlite(this Cron cron)
+    public static CronDb ToCronSqlite(this Cron cron)
     {
         return new()
         {
@@ -50,4 +42,3 @@ internal static class CronSqliteMapper
         };
     }
 }
-
