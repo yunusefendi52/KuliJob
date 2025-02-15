@@ -9,7 +9,7 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddKuliJob(v =>
 {
-    v.MinCronPollingIntervalMs = 500;
+    // v.MinCronPollingIntervalMs = 500;
     // v.UsePostgreSQL("Host=localhost;Username=postgres;Password=postgres;Database=KuliJobWeb;Include Error Detail=True");
     v.UseSqlite("kulijob.db");
 

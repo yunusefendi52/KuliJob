@@ -5,6 +5,10 @@ namespace KuliJob;
 public partial interface IQueueJob
 {
     Task IsStarted { get; }
+    Task<string> Enqueue<T>(QueueOptions? queueOptions = null)
+    {
+        return Enqueue(typeof(T).Name, null, queueOptions);
+    }
     Task<string> Enqueue<T>(JobDataMap? data = null, QueueOptions? queueOptions = null)
     {
         return Enqueue(typeof(T).Name, data, queueOptions);

@@ -134,7 +134,7 @@ internal class SqliteStorage(JobConfiguration configuration, MyClock myClock) : 
         var q = db.Table<SqliteJobInput>()
             .Skip(offset)
             .Take(limit)
-            .OrderByDescending(v => v.StartedOn);
+            .OrderByDescending(v => v.CreatedOn);
         if (jobState != null)
         {
             q = q.Where(v => v.JobState == jobState);

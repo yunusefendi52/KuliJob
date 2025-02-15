@@ -173,7 +173,7 @@ internal class PostgresJobStorage(
         var results = await conn.QueryAsync<PostgresJobInput>($"""
         select * from {schema}.job
         {(jobState is not null ? "where state = @jobState" : null)}
-        order by started_on desc
+        order by created_on desc
         limit @limit
         offset @offset
         """, new

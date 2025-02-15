@@ -1,7 +1,26 @@
 @page
+@using KuliJob;
+@inject IQueueJob queueJob;
+
 @functions {
-    public ActionResult OnGetAsync()
+    public async Task<IActionResult> OnPostScheduleJobAsync()
     {
-        return Redirect("/kulijob");
+        await queueJob.Enqueue("notify_job", new JobDataMap()
+        {
+            {"msg", "My message"},
+        });
+        return RedirectToPage();
     }
 }
+
+@{
+    ViewData["Title"] = "Scheduler";
+}
+
+<h3>Scheduler</h3>
+
+<form method="post">
+    <button asp-page-handler="ScheduleJob" class="btn btn-primary">Schedule Job</button>
+</form>
+
+<a class="nav-link text-dark" href="/kulijob"><button>Go To Dashboard</button></a>
