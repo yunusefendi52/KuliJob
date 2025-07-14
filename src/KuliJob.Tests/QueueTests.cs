@@ -32,7 +32,7 @@ public class QueueTests : BaseTest
         {
             Queue = "example_queue",
         });
-        await WaitJobTicks();
+        await WaitJobTicks(2);
         var defaultJob = await jobStorage.GetJobById(defaultJobId);
         var exampleJob = await jobStorage.GetJobById(exampleQueueJobId);
         await Assert.That(defaultJob).IsNotNull();

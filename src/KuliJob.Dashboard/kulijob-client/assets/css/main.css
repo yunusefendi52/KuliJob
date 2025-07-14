@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+    --font-sans: 'Public Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+    --ui-radius: 0rem;
+}
+
+html,
+body,
+#__nuxt {
+    font-size: 15px;
+    /* word-break: break-word; */
+    margin: 0px;
+    height: 100%;
+}

@@ -11,17 +11,7 @@ public static class SqliteJobExtensions
     public static void UseSqlite(this JobConfiguration jobConfiguration, string path)
     {
         jobConfiguration.ServiceCollection.TryAddSingleton<SqliteJobStorage>();
-        // jobConfiguration.ServiceCollection.AddSingleton<IDbContextFactory<AppDbContext>, EFAppDbContextFactory>();
-        // jobConfiguration.ServiceCollection.AddDbContextFactory<AppDbContext, EFAppDbContextFactory>();
-        jobConfiguration.ServiceCollection.AddScoped(sp =>
-        {
-            var options = sp.GetRequiredService<DbContextOptions<AppDbContext>>();
-            return new AppDbContext(options);
-        });
-        jobConfiguration.ServiceCollection.AddDbContextPool<AppDbContext>(v =>
-        {
-            v.SetupDbContextOptions($"Data Source={path};");
-        });
+        jobConfiguration.ServiceCollection.TryAddSingleton(_ => new SqliteDataSource(path));
         jobConfiguration.ServiceCollection.TryAddSingleton<IJobStorage>(sp =>
         {
             var configuration = sp.GetRequiredService<JobConfiguration>();
@@ -36,12 +26,3 @@ public static class SqliteJobExtensions
             .UseSnakeCaseNamingConvention();
     }
 }
-
-// internal class EFAppDbContextFactory(IServiceProvider serviceProvider) : IDbContextFactory<AppDbContext>
-// {
-//     public AppDbContext CreateDbContext()
-//     {
-//         var options = serviceProvider.GetRequiredService<DbContextOptions<AppDbContext>>();
-//         return new AppDbContext(options);
-//     }
-// }

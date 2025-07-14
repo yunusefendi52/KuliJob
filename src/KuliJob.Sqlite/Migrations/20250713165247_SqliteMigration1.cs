@@ -1,11 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace KuliJob.Sqlite.Migrations
 {
-    public partial class Migration1 : Migration
+    /// <inheritdoc />
+    public partial class SqliteMigration1 : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -28,16 +31,12 @@ namespace KuliJob.Sqlite.Migrations
                 name: "job",
                 columns: table => new
                 {
-                    id = table.Column<string>(type: "TEXT", nullable: false),
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
                     job_name = table.Column<string>(type: "TEXT", nullable: false),
-                    job_data = table.Column<string>(type: "TEXT", nullable: false),
+                    job_data = table.Column<string>(type: "TEXT", nullable: true),
+                    job_state_id = table.Column<Guid>(type: "TEXT", nullable: false),
                     job_state = table.Column<int>(type: "INTEGER", nullable: false),
                     start_after = table.Column<long>(type: "INTEGER", nullable: false),
-                    started_on = table.Column<long>(type: "INTEGER", nullable: true),
-                    completed_on = table.Column<long>(type: "INTEGER", nullable: true),
-                    cancelled_on = table.Column<long>(type: "INTEGER", nullable: true),
-                    failed_on = table.Column<long>(type: "INTEGER", nullable: true),
-                    failed_message = table.Column<string>(type: "TEXT", nullable: true),
                     created_on = table.Column<long>(type: "INTEGER", nullable: false),
                     retry_max_count = table.Column<int>(type: "INTEGER", nullable: false),
                     retry_count = table.Column<int>(type: "INTEGER", nullable: false),
@@ -53,6 +52,34 @@ namespace KuliJob.Sqlite.Migrations
                     table.PrimaryKey("pk_job", x => x.id);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "job_state",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    job_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    job_state = table.Column<int>(type: "INTEGER", nullable: false),
+                    message = table.Column<string>(type: "TEXT", nullable: true),
+                    created_at = table.Column<long>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_job_state", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "server",
+                columns: table => new
+                {
+                    id = table.Column<string>(type: "TEXT", nullable: false),
+                    data = table.Column<string>(type: "jsonb", nullable: true),
+                    last_heartbeat = table.Column<long>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_server", x => x.id);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "ix_job_created_on",
                 table: "job",
@@ -64,11 +91,6 @@ namespace KuliJob.Sqlite.Migrations
                 column: "job_name");
 
             migrationBuilder.CreateIndex(
-                name: "ix_job_job_state",
-                table: "job",
-                column: "job_state");
-
-            migrationBuilder.CreateIndex(
                 name: "ix_job_start_after",
                 table: "job",
                 column: "start_after");
@@ -77,8 +99,20 @@ namespace KuliJob.Sqlite.Migrations
                 name: "ix_job_throttle_key",
                 table: "job",
                 column: "throttle_key");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_job_state_id",
+                table: "job_state",
+                column: "id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_job_state_id_job_id",
+                table: "job_state",
+                columns: new[] { "id", "job_id" },
+                unique: true);
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
@@ -86,6 +120,12 @@ namespace KuliJob.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "job");
+
+            migrationBuilder.DropTable(
+                name: "job_state");
+
+            migrationBuilder.DropTable(
+                name: "server");
         }
     }
 }

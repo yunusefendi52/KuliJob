@@ -6,19 +6,23 @@ public class SetupServer : IAsyncDisposable
 {
     public ServiceProvider Services { get; private set; } = null!;
     public IQueueJob QueueJob { get; private set; } = null!;
+    public IQueueExprJob QueueExprJob { get; private set; } = null!;
 
     public Func<Task>? Dispose { get; private set; }
 
+    public string? CurrentConnString { get; private set; }
+
     public static async Task<SetupServer> Start(
         Action<IServiceCollection>? initServices = null,
-        Action<JobConfiguration>? config = null)
+        Action<JobConfiguration>? config = null,
+        string? reuseConnString = null)
     {
         Func<Task>? Dispose = null;
-        string connString = null!;
+        string connString = reuseConnString ?? null!;
         if (ModuleInitializer.K_TestStorage == KTestType.Pg)
         {
             var postgresStart = new PostgresStart();
-            connString = await postgresStart.Start();
+            connString ??= await postgresStart.Start();
             Dispose = async () =>
             {
                 await postgresStart.DisposeAsync();
@@ -26,7 +30,7 @@ public class SetupServer : IAsyncDisposable
         }
         else if (ModuleInitializer.K_TestStorage == KTestType.Sqlite)
         {
-            connString = TestUtils.GetTempFile();
+            connString ??= TestUtils.GetTempFile();
             Dispose = () =>
             {
                 File.Delete(connString);
@@ -68,6 +72,7 @@ public class SetupServer : IAsyncDisposable
         var sp = services.BuildServiceProvider();
         var jobService = sp.GetRequiredService<JobServiceHosted>();
         var queueJob = sp.GetRequiredService<IQueueJob>();
+        var queueExprJob = sp.GetRequiredService<IQueueExprJob>();
         var cronScheduler = sp.GetRequiredService<CronJobHostedService>();
         await jobService.StartAsync(default);
         await queueJob.IsStarted;
@@ -75,7 +80,9 @@ public class SetupServer : IAsyncDisposable
         {
             Services = sp,
             QueueJob = queueJob,
+            QueueExprJob = queueExprJob,
             Dispose = Dispose,
+            CurrentConnString = connString,
         };
     }
 

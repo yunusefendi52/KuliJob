@@ -33,7 +33,7 @@ public class ScheduleTests : BaseTest
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Failed);
         await Assert.That(job!.FailedOn).IsNotNull();
-        await Assert.That(job!.FailedMessage).IsEqualTo("ThrowsHandlerJob throws exception");
+        await Assert.That(job!.StateMessage).IsEqualTo("ThrowsHandlerJob throws exception");
     }
 
     [Test]
@@ -86,7 +86,7 @@ public class ScheduleTests : BaseTest
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
-        await Assert.That(job!.FailedMessage).IsNullOrWhitespace();
+        await Assert.That(job!.StateMessage).IsNullOrWhitespace();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
 
         var txt = await File.ReadAllTextAsync(txtFile);
@@ -104,7 +104,7 @@ public class ScheduleTests : BaseTest
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
-        await Assert.That(job!.FailedMessage).Contains("No handler registered for job").And.Contains(job.JobName);
+        await Assert.That(job!.StateMessage).Contains("No handler registered for job").And.Contains(job.JobName);
     }
 
     [Test]
@@ -118,7 +118,7 @@ public class ScheduleTests : BaseTest
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
-        await Assert.That(job!.FailedMessage).Contains("No handler registered for job").And.Contains(job.JobName);
+        await Assert.That(job!.StateMessage).Contains("No handler registered for job").And.Contains(job.JobName);
     }
 
     [Test]
@@ -136,11 +136,11 @@ public class ScheduleTests : BaseTest
         await WaitJobTicks(2);
         var job = await jobStorage.GetJobById(jobId);
         var jobThrows = await jobStorage.GetJobById(jobIdThrow);
-        await Assert.That(job!.FailedMessage).IsNull();
+        await Assert.That(job!.StateMessage).IsNull();
         await Assert.That(job!.CompletedOn).IsNotNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
 
-        await Assert.That(jobThrows!.FailedMessage).IsNotNull();
+        await Assert.That(jobThrows!.StateMessage).IsNotNull();
         await Assert.That(jobThrows!.FailedOn).IsNotNull();
         await Assert.That(jobThrows!.JobState).IsEqualTo(JobState.Failed);
     }

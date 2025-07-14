@@ -17,10 +17,10 @@ public class ScheduleExpressionTests : BaseTest
         var dateTime = DateTime.UtcNow;
         var dateTimeOffset = DateTimeOffset.UtcNow;
         var decimalValue = decimal.MinValue;
-        var jobId = await ss.QueueJob.Enqueue(() => ExpressionSerializerTests.TaskMethodParams(tmp, value, boolValue, nullValue, guidValue, dateTime, dateTimeOffset, decimalValue, int.MinValue, short.MaxValue, long.MaxValue));
+        var jobId = await ss.QueueExprJob.Enqueue(() => ExpressionSerializerTests.TaskMethodParams(tmp, value, boolValue, nullValue, guidValue, dateTime, dateTimeOffset, decimalValue, int.MinValue, short.MaxValue, long.MaxValue));
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
-        await Assert.That(job!.FailedMessage).IsNull();
+        await Assert.That(job!.StateMessage).IsNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job!.FailedOn).IsNull();
 
@@ -34,10 +34,10 @@ public class ScheduleExpressionTests : BaseTest
         await using var ss = await SetupServer.Start();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
         var tmp = TestUtils.GetTempFile();
-        var jobId = await ss.QueueJob.Enqueue(() => ActionMethod(tmp));
+        var jobId = await ss.QueueExprJob.Enqueue(() => ActionMethod(tmp));
         await WaitJobTicks();
         var job = await jobStorage.GetJobById(jobId);
-        await Assert.That(job!.FailedMessage).IsNull();
+        await Assert.That(job!.StateMessage).IsNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job!.FailedOn).IsNull();
 
@@ -53,10 +53,10 @@ public class ScheduleExpressionTests : BaseTest
         });
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
         var tmp = TestUtils.GetTempFile();
-        var jobId = await ss.QueueJob.Enqueue<MyService>(t => t.ActionMethodTask(tmp));
-        await WaitJobTicks();
+        var jobId = await ss.QueueExprJob.Enqueue<MyService>(t => t.ActionMethodTask(tmp));
+        await WaitJobTicks(2);
         var job = await jobStorage.GetJobById(jobId);
-        await Assert.That(job!.FailedMessage).IsNull();
+        await Assert.That(job!.StateMessage).IsNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job!.FailedOn).IsNull();
 

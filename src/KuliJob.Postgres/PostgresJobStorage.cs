@@ -1,9 +1,11 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading.Channels;
 using Dapper;
 using KuliJob.Internals;
+using KuliJob.Storage.Data;
 using KuliJob.Storages;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace KuliJob.Postgres;
@@ -11,169 +13,118 @@ namespace KuliJob.Postgres;
 internal class PostgresJobStorage(
     PgDataSource dataSource,
     JobConfiguration configuration,
-    MyClock myClock) : IJobStorage
+    MyClock myClock) : BaseJobStorage(dataSource, configuration, myClock)
 {
+    readonly JobConfiguration configuration = configuration;
+    readonly MyClock myClock = myClock;
+
     readonly string schema = dataSource.Schema;
 
-    public async Task StartStorage(CancellationToken cancellationToken)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
-        await conn.ExecuteAsync($"""
-        start transaction;
-        create schema if not exists {schema};
-        create table if not exists {schema}.job  (
-            id uuid not null primary key,
-            name text not null,
-            data jsonb,
-            state smallint not null default(0),
-            retry_max_count smallint not null default(0),
-            retry_count smallint not null default(0),
-            retry_delay smallint not null default(0),
-            start_after timestamp with time zone not null,
-            started_on timestamp with time zone,
-            completed_on timestamp with time zone,
-            cancelled_on timestamp with time zone,
-            failed_on timestamp with time zone,
-            failed_message text,
-            created_on timestamp with time zone not null,
-            queue text not null default 'default',
-            priority smallint not null default(0),
-            server_name text,
-            throttle_key text,
-            throttle_seconds int
-        );
-        create index if not exists job_name_idx on {schema}.job (name);
-        create index if not exists job_name_id_idx on {schema}.job (name, id);
-        create index if not exists job_created_on_id_idx on {schema}.job (created_on, id);
-        create index if not exists job_name_state_start_after_idx on {schema}.job (name, state, start_after);
-        create index if not exists job_name_state_start_after_queue_idx on {schema}.job (name, state, start_after, queue);
-        alter table {schema}.job add if not exists priority smallint not null default(0);
-        create index if not exists job_priority_created_on_id_idx on {schema}.job (priority, created_on, id);
-        create index if not exists job_priority_created_on_id_queue_idx on {schema}.job (priority, created_on, id, queue);
+    readonly string channelName = "kulijob_ch";
 
-        -- CRON
-        create table if not exists {schema}.cron (
-            name text not null primary key,
-            cron_expression text not null,
-            data text not null,
-            timezone text,
-            created_at timestamp with time zone not null,
-            updated_at timestamp with time zone not null
-        );
-        commit;
-        """);
+    public override async Task StartStorage(CancellationToken cancellationToken)
+    {
+        await base.StartStorage(cancellationToken);
+
+        StartListenToNewJob(cancellationToken);
     }
 
-    public async Task CancelJobById(string jobId)
+    void StartListenToNewJob(CancellationToken cancellationToken = default)
     {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        await conn.QuerySingleAsync($"""
-        update {schema}.job
-        set cancelled_on = @now,
-            state = '{(int)JobState.Cancelled}'
-        where id = @id::uuid
-            and state < '{(int)JobState.Completed}'
-        returning 1
-        """, new
+        if (!configuration.ListenNotifyNewJobEnabled)
         {
-            id = jobId,
-            now = myClock.GetUtcNow(),
-        });
-    }
-
-    public async Task CompleteJobById(string jobId)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        await conn.QuerySingleAsync($"""
-        update {schema}.job
-        set completed_on = @now,
-            state = '{(int)JobState.Completed}'
-        where id = @id::uuid
-            and state = '{(int)JobState.Active}'
-        returning 1
-        """, new
-        {
-            id = jobId,
-            now = myClock.GetUtcNow(),
-        });
-    }
-
-    public async Task FailJobById(string jobId, string failedMessage)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        await conn.QuerySingleAsync($"""
-        update {schema}.job
-        set failed_on = @now,
-            state = '{(int)JobState.Failed}',
-            failed_message = @failedMessage
-        where id = @id::uuid
-            and state = '{(int)JobState.Active}'
-        returning 1
-        """, new
-        {
-            id = jobId,
-            failedMessage,
-            now = myClock.GetUtcNow(),
-        });
-    }
-
-    public async Task<Job?> FetchNextJob(CancellationToken cancellationToken = default)
-    {
-        // TODO: Check queue query where here
-        var queues = string.Join(',', configuration.Queues.Select(v => $"'{v}'"));
-        if (string.IsNullOrEmpty(queues))
-        {
-            return null;
+            return;
         }
+
+        _ = Task.Run(async () =>
+        {
+            await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
+            await conn.ExecuteAsync($"listen {channelName}");
+            conn.Notification += (s, e) =>
+            {
+                if (Guid.TryParse(e.Payload, out var nextId))
+                {
+                    NotifyNewJob(nextId);
+                }
+            };
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await conn.WaitAsync(cancellationToken);
+            }
+        }, cancellationToken);
+    }
+
+    public override async Task<Job?> FetchNextJob(Guid? nextId, CancellationToken cancellationToken = default)
+    {
+        var jobStateId = Guid.NewGuid();
+        var startedOn = myClock.GetUtcNow();
         await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var tx = await conn.BeginTransactionAsync(cancellationToken);
         var nextJob = await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
         with locked_job as (
-            select id from {schema}.job
-            where state < '{(int)JobState.Active}'
-                and start_after < @now
-                and queue in ({queues})
-            order by priority, created_on, id
+            select j.id from {schema}.job j
+            where j.job_state < @jobState
+                and j.start_after < @now
+                and j.queue = ANY(@queues)
+                {(nextId != default ? "and j.id = @jobId" : null)}
+            order by j.priority, j.created_on, j.id
             limit 1
             for update skip locked
         )
+
         update {schema}.job job
         set
-            state = '{(int)JobState.Active}',
-            started_on = @now,
+            job_state = @jobState,
+            job_state_id = @jobStateId,
             server_name = @serverName
         from locked_job
         where job.id = locked_job.id
-        returning job.*
+        returning job.*;
         """, new
         {
-            now = myClock.GetUtcNow(),
+            now = startedOn,
             serverName = configuration.ServerName,
+            jobStateId = jobStateId,
+            queues = configuration.Queues.ToArray(),
+            jobState = (int)JobState.Active,
+            jobId = nextId,
         });
-        return nextJob?.ToJobInput();
-    }
 
-    public async Task<Job?> GetJobById(string jobId)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        var result = await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
-        select * from {schema}.job
-        where id = @id::uuid
+        if (nextJob == null)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return null;
+        }
+
+        await conn.ExecuteAsync($"""
+        insert into {schema}.job_state (id, job_id, job_state, message, created_at)
+        values (@id, @jobId, '{(int)JobState.Active}', null, @now)
         """, new
         {
-            id = jobId,
-            now = myClock.GetUtcNow(),
+            now = startedOn,
+            id = jobStateId,
+            jobId = nextJob.id,
         });
-        var jobInput = result?.ToJobInput();
+
+        await tx.CommitAsync(cancellationToken);
+
+        var jobInput = nextJob?.ToJobInput();
+        if (jobInput is not null)
+        {
+            jobInput.StartedOn = startedOn;
+        }
         return jobInput;
     }
 
-    public async Task<IEnumerable<Job>> GetLatestJobs(int page, int limit, JobState? jobState = null)
+    public override async Task<IEnumerable<Job>> GetLatestJobs(int page, int limit, JobState? jobState = null)
     {
         await using var conn = await dataSource.OpenConnectionAsync();
         var results = await conn.QueryAsync<PostgresJobInput>($"""
-        select * from {schema}.job
-        {(jobState is not null ? "where state = @jobState" : null)}
-        order by created_on desc
+        select js.*, j.*, js.message "state_message", js.created_at "state_created_at" from {schema}.job j
+        left join {schema}.job_state js on js.job_id = j.id and js.id = j.job_state_id
+        {(jobState is not null ? "where j.job_state = @jobState" : null)}
+        order by j.created_on desc
         limit @limit
         offset @offset
         """, new
@@ -185,17 +136,40 @@ internal class PostgresJobStorage(
         return results.Select(v => v.ToJobInput());
     }
 
-    public async Task InsertJob(Job jobInput)
+    public override async Task InsertJob(Job jobInput)
     {
-        var commandText = $"""
+        await using var conn = await dataSource.OpenConnectionAsync();
+        await using var tx = await conn.BeginTransactionAsync();
+
+        var jobStateId = GenerateId();
+        var jobState = jobInput.JobState;
+        var now = myClock.GetUtcNow();
+
+        await conn.ExecuteAsync($"""
+        insert into {schema}.job_state (
+            id,
+            job_id,
+            created_at,
+            job_state
+        )
+        values (@id, @job_id, @created_at, @job_state)
+        """, new
+        {
+            id = jobStateId,
+            job_id = jobInput.Id,
+            created_at = now,
+            job_state = jobState,
+        });
+        await using var command = new NpgsqlCommand($"""
         insert into {schema}.job (
             id,
-            name,
-            data,
-            state,
+            job_name,
+            job_data,
+            job_state,
+            job_state_id,
             retry_max_count,
             retry_count,
-            retry_delay,
+            retry_delay_ms,
             start_after,
             created_on,
             queue,
@@ -203,14 +177,13 @@ internal class PostgresJobStorage(
             throttle_key,
             throttle_seconds
         )
-        values (@id, @name, @data, @state, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue, @priority, @throttle_key, @throttle_seconds)
-        """;
-        await using var conn = await dataSource.OpenConnectionAsync();
-        await using var command = new NpgsqlCommand(commandText, conn);
-        command.Parameters.AddWithValue("@id", Guid.Parse(jobInput.Id));
+        values (@id, @name, @data, @state, @job_state_id, @retry_max_count, @retry_count, @retry_delay, @start_after, @created_on, @queue, @priority, @throttle_key, @throttle_seconds)
+        """, conn);
+        command.Parameters.AddWithValue("@id", jobInput.Id);
         command.Parameters.AddWithValue("@name", jobInput.JobName);
         command.Parameters.AddWithValue("@data", NpgsqlTypes.NpgsqlDbType.Jsonb, jobInput.JobData == null ? DBNull.Value : jobInput.JobData);
         command.Parameters.AddWithValue("@state", (short)jobInput.JobState);
+        command.Parameters.AddWithValue("@job_state_id", jobStateId);
         command.Parameters.AddWithValue("@retry_max_count", jobInput.RetryMaxCount);
         command.Parameters.AddWithValue("@retry_count", jobInput.RetryCount);
         command.Parameters.AddWithValue("@retry_delay", jobInput.RetryDelayMs);
@@ -226,124 +199,18 @@ internal class PostgresJobStorage(
         {
             throw new Exception($"Job not added {jobInput.Id} - {jobInput.JobName}");
         }
-    }
-
-    public async Task ResumeJob(string jobId)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        await conn.QuerySingleAsync($"""
-        update {schema}.job
-        set completed_on = null,
-            state = '{(int)JobState.Created}'
-        where id = @id::uuid
-            and state = '{(int)JobState.Cancelled}'
-        returning 1
-        """, new
+        if (configuration.ListenNotifyNewJobEnabled)
         {
-            id = jobId,
-        });
-    }
-
-    public async Task<Job> RetryJob(string jobId, int retryDelay)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        var result = await conn.QuerySingleAsync<PostgresJobInput>($"""
-        update {schema}.job
-        set completed_on = null,
-            state = '{(int)JobState.Retry}',
-            start_after = start_after + ({retryDelay} * interval '1 ms'),
-            retry_count = retry_count + 1
-        where id = @id::uuid
-        returning *
-        """, new
-        {
-            id = jobId,
-        });
-        return result.ToJobInput();
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public async Task AddOrUpdateCron(Cron cron)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        var now = DateTimeOffset.UtcNow;
-        await conn.QuerySingleAsync($"""
-        INSERT INTO {schema}.cron(
-            name,
-            cron_expression,
-            data,
-            timezone,
-            created_at,
-            updated_at
-        )
-        VALUES
-            (@name, @cron_expression, @data, @timezone, @now, @now)
-        ON CONFLICT (name) DO UPDATE SET
-            cron_expression = EXCLUDED.cron_expression,
-            data = EXCLUDED.data,
-            timezone = EXCLUDED.timezone,
-            updated_at = EXCLUDED.updated_at
-        RETURNING 1;
-        """, new
-        {
-            name = cron.Name,
-            cron_expression = cron.CronExpression,
-            data = cron.Data,
-            timezone = cron.TimeZone,
-            now,
-        });
-    }
-
-    public async Task<IEnumerable<Cron>> GetCrons()
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        var list = await conn.QueryAsync($"""
-        select * from {schema}.cron
-        """);
-        var real = list.Select(v =>
-        {
-            return new Cron
+            if (jobInput.StartAfter < DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(30)))
             {
-                CronExpression = v.cron_expression,
-                Data = v.data,
-                Name = v.name,
-                CreatedAt = v.created_at,
-                TimeZone = v.timezone,
-                UpdatedAt = v.updated_at,
-            };
-        }).ToList();
-        return real;
+                await conn.ExecuteAsync($"notify {channelName}, '{jobInput.Id}'");
+            }
+        }
+        await tx.CommitAsync();
     }
 
-    public async Task DeleteCron(string name)
+    static Guid GenerateId()
     {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        await conn.QuerySingleAsync($"""
-        delete from {schema}.cron
-        where name = @name
-        returning 1
-        """, new
-        {
-            name = name,
-        });
-    }
-
-    public async Task<Job?> GetJobByThrottle(string throttleKey)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync();
-        var job = await conn.QuerySingleOrDefaultAsync<PostgresJobInput>($"""
-        select * from {schema}.job
-        where throttle_key = @throttle_key
-        order by created_on desc
-        limit 1
-        """, new
-        {
-            throttle_key = throttleKey,
-        });
-        return job?.ToJobInput();
+        return Guid.NewGuid();
     }
 }

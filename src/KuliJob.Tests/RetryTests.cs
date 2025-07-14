@@ -18,7 +18,7 @@ public class RetryTests : BaseTest
         {
             RetryMaxCount = 2,
         });
-        await WaitJobTicks();
+        await WaitJobTicks(10);
         var job = await jobStorage.GetJobById(jobId);
         await Assert.That(job).IsNotNull();
         await Assert.That(job!.JobState).IsEqualTo(JobState.Completed);

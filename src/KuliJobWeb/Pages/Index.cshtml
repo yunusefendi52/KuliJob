@@ -5,9 +5,12 @@
 @functions {
     public async Task<IActionResult> OnPostScheduleJobAsync()
     {
-        await queueJob.Enqueue("notify_job", new JobDataMap()
+        await Parallel.ForAsync(0, 5, async (d, c) =>
         {
-            {"msg", "My message"},
+            await queueJob.Enqueue("notify_job", new JobDataMap()
+            {
+                {"msg", $"My message {d}"},
+            });
         });
         return RedirectToPage();
     }

@@ -83,7 +83,7 @@ internal class CronJobHostedService(
                         { "k_cron", cron },
                     }, new()
                     {
-                        Queue = "k_queue_cron",
+                        Queue = JobExtensions.DefaultCronName,
                         ThrottleKey = throttleKey,
                         ThrottleTime = throttleTime,
                     });

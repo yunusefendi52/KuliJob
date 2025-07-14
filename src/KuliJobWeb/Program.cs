@@ -3,15 +3,19 @@ using KuliJobWeb.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddRazorPages();
 builder.Services.AddLogging();
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddHttpClient();
 
 builder.Services.AddKuliJob(v =>
 {
-    // v.MinCronPollingIntervalMs = 500;
-    // v.UsePostgreSQL("Host=localhost;Username=postgres;Password=postgres;Database=KuliJobWeb;Include Error Detail=True");
-    v.UseSqlite("kulijob.db");
+    v.MinCronPollingIntervalMs = 1000;
+    // v.MinPollingIntervalMs = 2000;
+    v.UsePostgreSQL("Host=localhost;Username=postgres;Password=postgres;Database=KuliJobWeb;Include Error Detail=True");
+    // v.UseSqlite("bin/kulijob2.db");
 
     v.AddKuliJob<NotifyJob>("notify_job");
 });
@@ -32,7 +36,7 @@ app.UseRouting();
 app.UseAuthorization();
 app.UseStaticFiles();
 
-// app.MapRazorPages();
+app.MapRazorPages();
 app.UseKuliJobDashboard();
 
 app.Run();

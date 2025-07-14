@@ -1,0 +1,31 @@
+{
+  "name": "nuxt-app",
+  "dependencies": {
+    "@hebilicious/vue-query-nuxt": "^0.3.0",
+    "@highlightjs/vue-plugin": "^2.1.0",
+    "@nuxt/ui": "^3.2.0",
+    "@primeuix/themes": "^1.1.2",
+    "@tailwindcss/vite": "^4.1.10",
+    "@tanstack/vue-query": "^5.80.7",
+    "@vueuse/nuxt": "13.3.0",
+    "nuxt": "^3.17.5",
+    "tailwindcss": "^4.1.10",
+    "uuid": "^11.1.0",
+    "vue": "^3.5.16",
+    "vue-router": "^4.5.1"
+  },
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "NUXT_DEV=1 nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "type": "module",
+  "trustedDependencies": [
+    "@hebilicious/vue-query-nuxt",
+    "@parcel/watcher",
+    "@tailwindcss/oxide"
+  ]
+}

@@ -1,6 +1,8 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using KuliJob.Storages;
+using KuliJob.Utils;
 
 namespace KuliJob;
 
@@ -11,13 +13,18 @@ internal class JobServerScheduler(
     JobConfiguration configuration,
     Serializer serializer,
     ExpressionSerializer expressionSerializer,
-    CronJobHostedService cronJobHostedService) : IQueueJob, IAsyncDisposable
+    CronJobHostedService cronJobHostedService) : IQueueJob, IQueueExprJob, IAsyncDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 
     readonly TaskCompletionSource isStarted = new();
 
     public Task IsStarted => isStarted.Task;
+
+    readonly Channel<Guid> notifier = Channel.CreateBounded<Guid>(new BoundedChannelOptions(1)
+    {
+        FullMode = BoundedChannelFullMode.DropNewest,
+    });
 
     public async Task Start()
     {
@@ -28,10 +35,17 @@ internal class JobServerScheduler(
             Worker: {configuration.Worker}
             Queues: {string.Join(", ", configuration.Queues)}
             Min job polling: {configuration.MinPollingIntervalMs} ms
+            Real-time job notifier enabled: {configuration.ListenNotifyNewJobEnabled}
             Min cron polling: {configuration.MinCronPollingIntervalMs} ms
+            Polling heartbeat: {configuration.HeartbeatPolling} ms
         """);
         isStarted.SetResult();
-        await Task.WhenAll(cronJobHostedService.ProcessCron(cancellation.Token), ProcessQueueAsync(cancellation.Token));
+        storage.NextJobIdNotifier += (s, e) =>
+        {
+            notifier.Writer.TryWrite(e);
+        };
+        await Task.WhenAll(cronJobHostedService.ProcessCron(cancellation.Token), ProcessQueueAsync(cancellation.Token), PollHeartbeat(cancellation.Token)
+            , ProcessMaintenance(cancellation.Token));
     }
 
     public ValueTask DisposeAsync()
@@ -41,13 +55,14 @@ internal class JobServerScheduler(
         return ValueTask.CompletedTask;
     }
 
-    public async Task<string> Enqueue(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, QueueOptions? scheduleOptions = null)
+    public async Task<Guid> Enqueue(string jobName, DateTimeOffset startAfter, JobDataMap? data = null, QueueOptions? scheduleOptions = null)
     {
         var jobData = serializer.Serialize(data);
         var throttleKey = scheduleOptions.HasValue ? scheduleOptions.Value.ThrottleKey : null;
         var throttleTime = scheduleOptions.HasValue && scheduleOptions.Value.ThrottleTime.HasValue ? scheduleOptions.Value.ThrottleTime.Value : TimeSpan.Zero;
         var jobInput = new Job
         {
+            JobStateId = null,
             JobName = jobName,
             JobData = jobData,
             StartAfter = startAfter,
@@ -83,11 +98,13 @@ internal class JobServerScheduler(
 
     async IAsyncEnumerable<Job> FetchLoop([EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        Guid? nextId = null;
         while (!cancellationToken.IsCancellationRequested)
         {
             while (true)
             {
-                var nextJob = await storage.FetchNextJob(cancellationToken);
+                var nextJob = await storage.FetchNextJob(nextId, cancellationToken);
+                nextId = null;
                 if (nextJob is null)
                 {
                     break;
@@ -95,7 +112,17 @@ internal class JobServerScheduler(
 
                 yield return nextJob;
             }
-            await Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), cancellationToken);
+            nextId = await TaskHelper.RaceAsync(
+                (c) => Task.Delay(TimeSpan.FromMilliseconds(configuration.MinPollingIntervalMs), c).ContinueWith(v => (Guid?)null),
+                (c) => notifier.Reader.ReadAsync(c).AsTask()!.ContinueWith(v =>
+                {
+                    return (Guid?)null;
+                    // if (v.IsCanceled)
+                    // {
+                    //     return null;
+                    // }
+                    // return (Guid?)v.Result; // TODO: this thing sometimes breaks integration test
+                }));
         }
     }
 
@@ -124,50 +151,47 @@ internal class JobServerScheduler(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Job error {jobId} {jobName}", jobInput.Id, jobInput.JobName);
+            await storage.FailJobById(jobInput.Id, ex.Message);
+
             if (jobInput.RetryMaxCount > 0 && jobInput.RetryCount < jobInput.RetryMaxCount)
             {
                 logger.LogError(ex, "Job error, will retry {jobId} {jobName} current retry {retryCount} max {retryMaxCount}", jobInput.Id, jobInput.JobName, jobInput.RetryCount, jobInput.RetryMaxCount);
-                var retriedJobInput = await storage.RetryJob(jobInput.Id, jobInput.RetryDelayMs);
+                await storage.RetryJob(jobInput.Id, jobInput.RetryDelayMs);
                 if (jobInput.RetryDelayMs == 0)
                 {
-                    jobInput = retriedJobInput;
                     goto RETRY;
                 }
-            }
-            else
-            {
-                logger.LogError(ex, "Job error {jobId} {jobName}", jobInput.Id, jobInput.JobName);
-                await storage.FailJobById(jobInput.Id, ex.Message);
             }
         }
     }
 
-    public async Task CancelJob(string jobId)
+    public async Task CancelJob(Guid jobId)
     {
         await storage.CancelJobById(jobId);
     }
 
-    public async Task ResumeJob(string jobId)
+    public async Task ResumeJob(Guid jobId)
     {
         await storage.ResumeJob(jobId);
     }
 
-    public Task<string> Enqueue(Expression<Action> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
+    Task<Guid> IQueueExprJob.Enqueue(Expression<Action> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
         return EnqueueFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    public Task<string> Enqueue(Expression<Func<Task>> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
+    Task<Guid> IQueueExprJob.Enqueue(Expression<Func<Task>> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
         return EnqueueFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    public Task<string> Enqueue<T>(Expression<Func<T, Task>> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
+    Task<Guid> IQueueExprJob.Enqueue<T>(Expression<Func<T, Task>> expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
         return EnqueueFromExpr(expression, startAfter, scheduleOptions);
     }
 
-    async Task<string> EnqueueFromExpr(LambdaExpression expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
+    async Task<Guid> EnqueueFromExpr(LambdaExpression expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
         var methodArg = expressionSerializer.FromExprToObject(expression)!;
         return await Enqueue("expr_job", startAfter, new JobDataMap
@@ -176,5 +200,44 @@ internal class JobServerScheduler(
             { "k_methodName", methodArg.MethodName },
             { "k_args", methodArg.Arguments! },
         }, scheduleOptions);
+    }
+
+    async Task PollHeartbeat(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(configuration.HeartbeatPolling, cancellationToken);
+                await using var serviceScope = serviceScopeFactory.CreateAsyncScope();
+                var sp = serviceScope.ServiceProvider;
+                var storage = sp.GetRequiredService<IJobStorage>();
+                await storage.UpdateHeartbeatServer();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("Error poll heartbeat {ex}", ex);
+            }
+        }
+    }
+
+    async Task ProcessMaintenance(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                await using var serviceScope = serviceScopeFactory.CreateAsyncScope();
+                var sp = serviceScope.ServiceProvider;
+                var storage = sp.GetRequiredService<IJobStorage>();
+                await storage.RemoveInactiveServers();
+
+                await Task.Delay(configuration.ServerPollingMaintananceIntervalMs, token);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error running maintanance");
+            }
+        }
     }
 }

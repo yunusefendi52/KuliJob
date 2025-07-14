@@ -5,7 +5,7 @@ namespace KuliJob.Tests;
 
 public static class ModuleInitializer
 {
-    public static KTestType K_TestStorage = Enum.Parse<KTestType>(Environment.GetEnvironmentVariable("K_TEST_STORAGE", EnvironmentVariableTarget.Process) ?? KTestType.Sqlite.ToString(), true);
+    public static KTestType K_TestStorage = KTestType.Pg;
 
     [ModuleInitializer]
     public static void Init()
