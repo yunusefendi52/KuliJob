@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using KuliJob.CronJob;
 
 namespace KuliJob;
 
@@ -37,4 +38,5 @@ public class JobConfiguration
     internal JobFactory JobFactory { get; init; } = null!;
     internal string ServerName { get; } = Environment.MachineName;
 
+    internal List<Func<ICronJob, Task>> CronBuilders = [];
 }

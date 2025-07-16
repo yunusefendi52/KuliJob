@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace KuliJob.Storages;
 
 public class Cron
@@ -15,4 +17,10 @@ public class Cron
     public string? TimeZone { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+}
+
+internal class CronData
+{
+    [JsonPropertyName("expr")]
+    public string? Expr { get; set; }
 }

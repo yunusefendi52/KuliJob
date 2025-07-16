@@ -2,8 +2,9 @@ using System.Linq.Expressions;
 
 namespace KuliJob;
 
-public interface ICronJob
+internal interface ICronJob
 {
+    // Task AddOrUpdate<T>(string cronName, string cronExpression, CronOption? cronOption = null) where T : class, IJob;
     Task AddOrUpdate<T>(Expression<Func<T, Task>> expression, string cronName, string cronExpression, CronOption? cronOption = null);
 }
 

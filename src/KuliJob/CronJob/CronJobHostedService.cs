@@ -2,14 +2,14 @@ using System.Diagnostics;
 using Cronos;
 using KuliJob.Storages;
 
-namespace KuliJob;
+namespace KuliJob.CronJob;
 
-internal class CronJobHostedService(
+internal class CronJobSchedulerService(
     JobConfiguration configuration,
     IJobStorage jobStorage,
     IServiceScopeFactory serviceScopeFactory,
     MyClock myClock,
-    ILogger<CronJobHostedService> logger)
+    ILogger<CronJobSchedulerService> logger)
 {
     static readonly TimeSpan throttleTime = TimeSpan.FromSeconds(60);
 

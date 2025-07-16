@@ -18,11 +18,15 @@ builder.Services.AddKuliJob(v =>
     // v.UseSqlite("bin/kulijob2.db");
 
     v.AddKuliJob<NotifyJob>("notify_job");
+
+    v.AddCron<NotifyJob>(t => t.CallApi("hi from cron"), new()
+    {
+        CronName = "notify_job_cron",
+        CronExpression = "* * * * *",
+    });
 });
 // builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
 builder.AddKuliJobDashboard();
-
-builder.Services.AddHostedService<MyHostedService>();
 
 var app = builder.Build();
 

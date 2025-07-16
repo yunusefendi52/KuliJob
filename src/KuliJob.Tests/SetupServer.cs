@@ -1,3 +1,4 @@
+using KuliJob.CronJob;
 using KuliJob.Tests.Storages.Postgres;
 
 namespace KuliJob.Tests;
@@ -73,7 +74,8 @@ public class SetupServer : IAsyncDisposable
         var jobService = sp.GetRequiredService<JobServiceHosted>();
         var queueJob = sp.GetRequiredService<IQueueJob>();
         var queueExprJob = sp.GetRequiredService<IQueueExprJob>();
-        var cronScheduler = sp.GetRequiredService<CronJobHostedService>();
+        var cronRegisterService = sp.GetRequiredService<CronRegisterService>();
+        await cronRegisterService.StartAsync(default);
         await jobService.StartAsync(default);
         await queueJob.IsStarted;
         return new()

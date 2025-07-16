@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using KuliJob.CronJob;
 using KuliJob.Storages;
 using KuliJob.Utils;
 
@@ -13,7 +14,7 @@ internal class JobServerScheduler(
     JobConfiguration configuration,
     Serializer serializer,
     ExpressionSerializer expressionSerializer,
-    CronJobHostedService cronJobHostedService) : IQueueJob, IQueueExprJob, IAsyncDisposable
+    CronJobSchedulerService cronJobHostedService) : IQueueJob, IQueueExprJob, IAsyncDisposable
 {
     readonly CancellationTokenSource cancellation = new();
 

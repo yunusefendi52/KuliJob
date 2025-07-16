@@ -1,6 +1,7 @@
 using KuliJob.Storages;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using KuliJob;
+using KuliJob.CronJob;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -35,8 +36,10 @@ public static class JobExtensions
         serviceCollection.AddSingleton<ExpressionSerializer>();
         config.AddKuliJob<ExprJob>("expr_job");
         config.AddKuliJob<CronJobHandler>();
-        serviceCollection.AddSingleton<ICronJob, CronJob>();
-        serviceCollection.AddSingleton<CronJobHostedService>();
+        serviceCollection.AddSingleton<ICronJob, CronJobImpl>();
+        serviceCollection.AddSingleton<CronRegisterService>();
+        serviceCollection.AddHostedService<CronRegisterService>();
+        serviceCollection.AddSingleton<CronJobSchedulerService>();
     }
 
     public static void AddKuliJob<T>(this JobConfiguration configuration, string? jobName = null) where T : class, IJob
