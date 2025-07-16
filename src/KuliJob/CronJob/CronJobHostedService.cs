@@ -55,14 +55,16 @@ internal class CronJobSchedulerService(
 
     public async Task ProcessCron(CancellationToken stoppingToken)
     {
+        var cronos = await jobStorage.GetCrons();
+        var currCronos = cronos.Where(v => configuration.CronBuilders.Keys.Any(t => t == v.Name)).ToList();
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 var sw = Stopwatch.StartNew();
-
-                var cronos = await jobStorage.GetCrons();
-                await Parallel.ForEachAsync(cronos, new ParallelOptions
+                
+                await Parallel.ForEachAsync(currCronos, new ParallelOptions
                 {
                     CancellationToken = stoppingToken,
                     MaxDegreeOfParallelism = configuration.Worker,

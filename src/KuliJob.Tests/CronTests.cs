@@ -30,8 +30,59 @@ public class CronTests : BaseTest
                 CronExpression = "* * * * *",
             });
         });
-        await WaitCronTicks(2);
+        await WaitCronTicks(3);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1");
+    }
+
+    [Test]
+    public async Task Should_Throw_Invalid_Cron_Expression()
+    {
+        var tmp = TestUtils.GetTempFile();
+        Exception? exception = null;
+        await using var ss = await SetupServer.Start(config: v =>
+        {
+            v.MinCronPollingIntervalMs = 100;
+            try
+            {
+                v.AddCron<MyTestService>(t => t.IncrementTextFile(tmp), new()
+                {
+                    CronName = "inc_file",
+                    CronExpression = "* * * * *.30",
+                });
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+        });
+
+        await Assert.That(exception).HasMessageContaining("Invalid cron expression");
+    }
+
+    [Test]
+    public async Task Should_Only_Execute_Registered_Cron()
+    {
+        var tmp = TestUtils.GetTempFile();
+        await using var ss = await SetupServer.Start(config: v =>
+        {
+            v.MinCronPollingIntervalMs = 100;
+            v.AddCron<MyTestService>(t => t.IncrementTextFile(tmp), new()
+            {
+                CronName = "inc_file",
+                CronExpression = "* * * * *",
+            });
+        });
+        var cronJob = ss.Services.GetRequiredService<ICronJob>();
+        var myClock = ss.Services.GetRequiredService<MyClock>();
+        var cronScheduler = ss.Services.GetRequiredService<CronJobSchedulerService>();
+        var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
+        var tmp2 = TestUtils.GetTempFile();
+        await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.IncrementTextFile(tmp2), "inc_file_2", "* * * * *", new CronOption
+        {
+        })).ThrowsNothing();
+        await WaitCronTicks(3);
+        await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1");
+        await Assert.That(() => File.ReadAllTextAsync(tmp2)).IsNull();
     }
 
     [Test]
@@ -40,41 +91,51 @@ public class CronTests : BaseTest
     [TestCase(null)]
     public async Task Should_Execute_Cron_Only_Once_Per_Minute(string? timeZoneId)
     {
+        var tmp = TestUtils.GetTempFile();
         await using var ss = await SetupServer.Start(config: v =>
         {
             v.MinCronPollingIntervalMs = 100;
+            v.AddCron<MyTestService>(t => t.IncrementTextFile(tmp), new()
+            {
+                CronName = "inc_file",
+                CronExpression = "* * * * *",
+                TimeZoneId = timeZoneId,
+            });
         });
         var cronJob = ss.Services.GetRequiredService<ICronJob>();
         var myClock = ss.Services.GetRequiredService<MyClock>();
         var cronScheduler = ss.Services.GetRequiredService<CronJobSchedulerService>();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var tmp = TestUtils.GetTempFile();
-        await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.IncrementTextFile(tmp), "inc_file", "* * * * *", new CronOption
-        {
-            TimeZoneId = timeZoneId,
-        })).ThrowsNothing();
-        await WaitCronTicks(2);
+        await WaitCronTicks(3);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1");
-        await WaitCronTicks(2);
+        await WaitCronTicks(3);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1").Because("Still in 1 minute window throttle");
     }
 
     [Test]
     public async Task Should_Run_2_Crons()
     {
+        var firstTmp = TestUtils.GetTempFile();
+        var secondTmp = TestUtils.GetTempFile();
         await using var ss = await SetupServer.Start(config: v =>
         {
             v.MinCronPollingIntervalMs = 1000;
+            v.AddCron<MyTestService>(t => t.IncrementTextFile(firstTmp), new()
+            {
+                CronName = "inc_file_1",
+                CronExpression = "* * * * *",
+            });
+            v.AddCron<MyTestService>(t => t.IncrementTextFile(secondTmp), new()
+            {
+                CronName = "inc_file_2",
+                CronExpression = "* * * * *",
+            });
         });
         var cronJob = ss.Services.GetRequiredService<ICronJob>();
         var myClock = ss.Services.GetRequiredService<MyClock>();
         var cronScheduler = ss.Services.GetRequiredService<CronJobSchedulerService>();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var firstTmp = TestUtils.GetTempFile();
-        var secondTmp = TestUtils.GetTempFile();
-        await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.IncrementTextFile(firstTmp), "inc_file_1", "* * * * *")).ThrowsNothing();
-        await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.IncrementTextFile(secondTmp), "inc_file_2", "* * * * *")).ThrowsNothing();
-        await WaitCronTicks(2);
+        await WaitCronTicks(3);
         await Assert.That(() => File.ReadAllTextAsync(firstTmp)).IsEqualTo("1");
         await Assert.That(() => File.ReadAllTextAsync(secondTmp)).IsEqualTo("1");
     }
@@ -82,16 +143,20 @@ public class CronTests : BaseTest
     [Test]
     public async Task Should_Run_Only_At_Current_Minute()
     {
+        var firstTmp = TestUtils.GetTempFile();
         await using var ss = await SetupServer.Start(config: v =>
         {
             v.MinCronPollingIntervalMs = 1000;
+            v.AddCron<MyTestService>(t => t.WriteCurrentDate(firstTmp), new()
+            {
+                CronName = "write_date",
+                CronExpression = "* * * * *",
+            });
         });
         var cronJob = ss.Services.GetRequiredService<ICronJob>();
         var myClock = ss.Services.GetRequiredService<MyClock>();
         var cronScheduler = ss.Services.GetRequiredService<CronJobSchedulerService>();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        var firstTmp = TestUtils.GetTempFile();
-        await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.WriteCurrentDate(firstTmp), "write_date", "* * * * *")).ThrowsNothing();
         await WaitCronTicks(2);
         var date = await Assert.That(() => DateTimeOffset.Parse(File.ReadAllText(firstTmp)).ToUniversalTime()).ThrowsNothing();
         var utcNow = DateTimeOffset.UtcNow;

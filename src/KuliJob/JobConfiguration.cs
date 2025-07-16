@@ -38,5 +38,5 @@ public class JobConfiguration
     internal JobFactory JobFactory { get; init; } = null!;
     internal string ServerName { get; } = Environment.MachineName;
 
-    internal List<Func<ICronJob, Task>> CronBuilders = [];
+    internal Dictionary<string, Func<ICronJob, Task>> CronBuilders = [];
 }

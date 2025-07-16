@@ -14,7 +14,7 @@ internal class CronRegisterService(
 
         foreach (var cronBuilder in configuration.CronBuilders)
         {
-            await cronBuilder(cronJob);
+            await cronBuilder.Value(cronJob);
         }
     }
 }

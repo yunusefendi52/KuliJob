@@ -15,7 +15,7 @@ public static class CronJobExtensions
             throw new ArgumentException($"Invalid cron expression '{cronBuilder.CronExpression}'");
         }
 
-        configuration.CronBuilders.Add(async (cronJob) =>
+        configuration.CronBuilders.Add(cronBuilder.CronName, async (cronJob) =>
         {
             await cronJob.AddOrUpdate(expression, cronBuilder.CronName, cronBuilder.CronExpression, new()
             {
