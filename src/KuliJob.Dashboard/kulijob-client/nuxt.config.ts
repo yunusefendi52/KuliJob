@@ -69,4 +69,8 @@ export default defineNuxtConfig({
       },
     },
   },
+  experimental: {
+    // Disable automatic cache cleanup (default is true)
+    purgeCachedData: false
+  }
 })
