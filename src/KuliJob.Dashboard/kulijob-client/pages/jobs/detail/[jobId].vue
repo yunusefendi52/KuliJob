@@ -11,7 +11,16 @@ const { data: result } = useFetch<any>('/kulijob/api/kulijob/job', {
 
 const data = computed(() => result.value?.data)
 const jobStates = computed(() => result.value?.jobStates || [])
-
+const jobDuration = computed(() => {
+    const successIndex = jobStates.value.findIndex((e: any) => e.jobState === 3)
+    if (successIndex !== 0) {
+        return undefined
+    }
+    const failedState = jobStates.value[successIndex + 1]
+    const successState = jobStates.value[successIndex]
+    const durationms = new Date(successState.createdAt).getTime() - new Date(failedState.createdAt).getTime()
+    return durationms
+})
 </script>
 
 <template>
@@ -56,13 +65,6 @@ const jobStates = computed(() => result.value?.jobStates || [])
                 </UTooltip>
             </div>
         </div>
-        <template v-if="data?.stateMessage">
-            <USeparator class="my-5" />
-            <div class="flex flex-col gap-1">
-                <span class="text-xl font-medium mb-2">Message</span>
-                <code>{{ data?.stateMessage }}</code>
-            </div>
-        </template>
         <USeparator class="my-5" />
         <div class="flex flex-col gap-1">
             <span class="text-xl font-medium mb-2">Data Parameters</span>
@@ -73,14 +75,47 @@ const jobStates = computed(() => result.value?.jobStates || [])
             <span class="text-xl font-medium mb-2">States</span>
             <div class="flex flex-col gap-3">
                 <div v-for="item in jobStates" :key="item.id"
-                    class="rounded-[var(--ui-radius)] border border-default px-5 py-3 flex flex-col gap-1">
-                    <span class="font-bold text-lg">{{ jobStateToName(item.jobState) }}</span>
-                    <code v-if="item.message"><span>{{ item.message }}</span></code>
-                    <UTooltip :text="item.createdAt">
-                        <Refresher>
-                            <span>{{ formatRelativeTime(item.createdAt) }}</span>
-                        </Refresher>
-                    </UTooltip>
+                    class="rounded-[var(--ui-radius)] border border-accented flex flex-col" :class="{
+                        'border-red-500': item.jobState === 5,
+                        'border-green-500': item.jobState === 3,
+                    }">
+                    <div class="flex flex-row gap-1 px-4 p-3 items-center" :class="{
+                        'bg-red-500/10 text-red-600': item.jobState === 5,
+                        'bg-green-500/10 text-green-600': item.jobState === 3,
+                    }">
+                        <div>
+                            <span class="font-bold text-lg">{{ jobStateToName(item.jobState) }}</span>
+                        </div>
+                        <div class="flex-1"></div>
+                        <UTooltip :text="item.createdAt">
+                            <Refresher>
+                                <span>{{ formatRelativeTime(item.createdAt) }}</span>
+                            </Refresher>
+                        </UTooltip>
+                    </div>
+                    <div v-if="item.message || item.jobState === 3">
+                        <div class="border-b border-accented" :class="{
+                            'border-red-500': item.jobState === 5,
+                            'border-green-500': item.jobState === 3,
+                        }">
+                        </div>
+                        <div class="px-4 p-4">
+                            <code v-if="item.jobState === 5">
+                        <span>{{ item.message }}</span>
+                    </code>
+                            <div v-if="item.jobState === 3">
+                                <div class="flex flex-row gap-2">
+                                    <div class="lg:w-[120px] text-end font-semibold">
+                                        <span>Duration:</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <span>{{ jobDuration }}ms</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span v-else>{{ item.message }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
