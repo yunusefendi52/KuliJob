@@ -41,7 +41,11 @@ public class SetupServer : IAsyncDisposable
 
         var services = new ServiceCollection();
         initServices?.Invoke(services);
-        services.AddLogging();
+        services.AddLogging(v =>
+        {
+            v.SetMinimumLevel(LogLevel.Information);
+            v.AddConsole();
+        });
         services.AddKuliJob(v =>
         {
             v.MinPollingIntervalMs = 500;
