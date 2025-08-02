@@ -34,13 +34,12 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Test
+    - name: Test Postgres
       run: |
-        runTest() {
-          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
-        }
-        # K_TEST_STORAGE=sqlite runTest
-        K_TEST_STORAGE=pg runTest
+        K_TEST_STORAGE=pg dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
+    - name: Test Sqlite
+      run: |
+        K_TEST_STORAGE=sqlite dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
     - name: Pack
       run: |
         scripts/pack.sh
