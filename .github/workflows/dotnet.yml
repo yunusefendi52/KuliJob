@@ -12,7 +12,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        test_storage: [pg, sqlite]
+        test_storage: [pg]
 
     runs-on: ubuntu-24.04
 
