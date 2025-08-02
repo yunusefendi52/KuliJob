@@ -11,8 +11,9 @@ jobs:
   test:
     name: Test
     strategy:
+      max-parallel: 1
       matrix:
-        test_storage: [pg]
+        test_storage: [pg, sqlite]
 
     runs-on: ubuntu-24.04
 
@@ -25,6 +26,7 @@ jobs:
           6.0.x
           8.0.x
     - name: Run PostgreSQL
+      if: ${{ matrix.test_storage == 'pg' }}
       run: |
         docker pull postgres:15
         docker run -d \
