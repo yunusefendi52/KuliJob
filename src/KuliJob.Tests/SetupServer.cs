@@ -43,8 +43,10 @@ public class SetupServer : IAsyncDisposable
         initServices?.Invoke(services);
         services.AddLogging(v =>
         {
+            v.ClearProviders();
             v.SetMinimumLevel(LogLevel.Information);
             v.AddConsole();
+            v.AddDebug();
         });
         services.AddKuliJob(v =>
         {
