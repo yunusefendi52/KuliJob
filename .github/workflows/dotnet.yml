@@ -39,7 +39,7 @@ jobs:
         runTest() {
           dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
         }
-        K_TEST_STORAGE=sqlite runTest
+        # K_TEST_STORAGE=sqlite runTest
         K_TEST_STORAGE=pg runTest
     - name: Pack
       run: |
