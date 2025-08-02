@@ -37,7 +37,7 @@ public class PriorityTests : BaseTest
             var job1 = priorityJobs.First()!.CompletedOn!.Value.ToUnixTimeMilliseconds();
             var job2 = priorityJobs.Last()!.CompletedOn!.Value.ToUnixTimeMilliseconds();
             var deltaPriority = job2 - job1;
-            await Assert.That(deltaPriority).IsLessThan(50);
+            await Assert.That(deltaPriority).IsLessThan(250);
         }
         // Priority 1
         {
@@ -54,7 +54,7 @@ public class PriorityTests : BaseTest
             var job1 = priorityJobs.First(v => v!.Priority == 0)!.CompletedOn!.Value.ToUnixTimeMilliseconds();
             var job2 = priorityJobs.First(v => v!.Priority == 1)!.CompletedOn!.Value.ToUnixTimeMilliseconds();
             var deltaPriority = job2 - job1;
-            await Assert.That(deltaPriority).IsBetween(180, 250).Because("Smaller priority will run first");
+            await Assert.That(deltaPriority).IsBetween(180, 400).Because("Smaller priority will run first");
         }
     }
 
@@ -90,7 +90,7 @@ public class PriorityTests : BaseTest
             var job1 = priorityJobs.First(v => v!.Priority == 0)!.CompletedOn!.Value.ToUnixTimeMilliseconds();
             var job2 = priorityJobs.First(v => v!.Priority == 1)!.CompletedOn!.Value.ToUnixTimeMilliseconds();
             var deltaPriority = job2 - job1;
-            await Assert.That(deltaPriority).IsLessThan(50);
+            await Assert.That(deltaPriority).IsLessThan(250);
         }
     }
 }

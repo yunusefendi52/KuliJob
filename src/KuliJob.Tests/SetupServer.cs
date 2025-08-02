@@ -41,7 +41,14 @@ public class SetupServer : IAsyncDisposable
 
         var services = new ServiceCollection();
         initServices?.Invoke(services);
-        services.AddLogging();
+        services.AddLogging(v =>
+        {
+            v.ClearProviders();
+            v.SetMinimumLevel(LogLevel.Information);
+            // v.AddConsole();
+            // v.AddDebug();
+            v.AddNUnit();
+        });
         services.AddKuliJob(v =>
         {
             v.MinPollingIntervalMs = 500;
@@ -96,7 +103,10 @@ public class SetupServer : IAsyncDisposable
         await Services.DisposeAsync();
         if (Dispose is not null)
         {
-            await Dispose.Invoke();
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+            {
+                await Dispose.Invoke();
+            }
         }
     }
 }

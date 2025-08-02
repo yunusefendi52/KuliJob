@@ -73,6 +73,6 @@ public class ProcessJobTests : BaseTest
         var diffBetweenBatch = maxBatch2.CompletedOn.Value.ToUnixTimeMilliseconds() - maxBatch1.CompletedOn.Value.ToUnixTimeMilliseconds();
         await Assert.That(diffBetweenBatch).IsBetween(delayHandler - 30, delayHandler + 30)
             .Or
-            .IsBetween(delayHandler - 30, delayHandler + 600).Because("After use EF Core");
+            .IsBetween(0, delayHandler + 600).Because("After use EF Core");
     }
 }

@@ -10,6 +10,11 @@ on:
 jobs:
   test:
     name: Test
+    strategy:
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        test_storage: [pg, sqlite]
 
     runs-on: ubuntu-24.04
 
@@ -22,6 +27,7 @@ jobs:
           6.0.x
           8.0.x
     - name: Run PostgreSQL
+      if: ${{ matrix.test_storage == 'pg' }}
       run: |
         docker pull postgres:15
         docker run -d \
@@ -34,13 +40,9 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Test
+    - name: Test ${{ matrix.test_storage }}
       run: |
-        runTest() {
-          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
-        }
-        K_TEST_STORAGE=sqlite runTest
-        K_TEST_STORAGE=pg runTest
+        K_TEST_STORAGE=${{ matrix.test_storage }} dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
     - name: Pack
       run: |
         scripts/pack.sh

@@ -26,6 +26,15 @@ public class PostgresJobStorageTests : BaseTest
         return sp;
     }
 
+    [SetUp]
+    public void SetUp()
+    {
+        if (ModuleInitializer.K_TestStorage != KTestType.Pg)
+        {
+            NUnit.Framework.Assert.Ignore();
+        }
+    }
+
     [Test]
     public async Task Can_Start_And_Migrate_PostgresJob()
     {

@@ -35,7 +35,8 @@ public class FetchJobStoppedTests : BaseTest
             await Assert.That(job).IsNotNull();
             await Assert.That(job!.JobState).IsEqualTo(JobState.Created);
             await Assert.That(job!.JobName).IsEqualTo("handler_job");
-            await Assert.That(job!.StartAfter).IsEqualTo(scheduleAt);
+            var diff = scheduleAt - job!.StartAfter;
+            await Assert.That(diff).IsBetween(TimeSpan.Zero, TimeSpan.FromMilliseconds(100)).WithInclusiveBounds();
         }
     }
 

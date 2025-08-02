@@ -6,6 +6,7 @@ using NSubstitute;
 
 namespace KuliJob.Tests;
 
+[NonParallelizable]
 public class CronTests : BaseTest
 {
     [Test]
@@ -30,7 +31,7 @@ public class CronTests : BaseTest
                 CronExpression = "* * * * *",
             });
         });
-        await WaitCronTicks(3);
+        await WaitCronTicks(5);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1");
     }
 
@@ -80,7 +81,7 @@ public class CronTests : BaseTest
         await Assert.That(() => cronJob.AddOrUpdate<MyTestService>(t => t.IncrementTextFile(tmp2), "inc_file_2", "* * * * *", new CronOption
         {
         })).ThrowsNothing();
-        await WaitCronTicks(3);
+        await WaitCronTicks(5);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1");
         await Assert.That(() => File.ReadAllTextAsync(tmp2)).IsNull();
     }
@@ -106,9 +107,9 @@ public class CronTests : BaseTest
         var myClock = ss.Services.GetRequiredService<MyClock>();
         var cronScheduler = ss.Services.GetRequiredService<CronJobSchedulerService>();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        await WaitCronTicks(3);
+        await WaitCronTicks(10);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1");
-        await WaitCronTicks(3);
+        await WaitCronTicks(10);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1").Because("Still in 1 minute window throttle");
     }
 
@@ -135,7 +136,7 @@ public class CronTests : BaseTest
         var myClock = ss.Services.GetRequiredService<MyClock>();
         var cronScheduler = ss.Services.GetRequiredService<CronJobSchedulerService>();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        await WaitCronTicks(3);
+        await WaitCronTicks(5);
         await Assert.That(() => File.ReadAllTextAsync(firstTmp)).IsEqualTo("1");
         await Assert.That(() => File.ReadAllTextAsync(secondTmp)).IsEqualTo("1");
     }
