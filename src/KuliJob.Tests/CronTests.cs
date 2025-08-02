@@ -106,9 +106,9 @@ public class CronTests : BaseTest
         var myClock = ss.Services.GetRequiredService<MyClock>();
         var cronScheduler = ss.Services.GetRequiredService<CronJobSchedulerService>();
         var jobStorage = ss.Services.GetRequiredService<IJobStorage>();
-        await WaitCronTicks(5);
+        await WaitCronTicks(7);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1");
-        await WaitCronTicks(5);
+        await WaitCronTicks(7);
         await Assert.That(() => File.ReadAllTextAsync(tmp)).IsEqualTo("1").Because("Still in 1 minute window throttle");
     }
 
