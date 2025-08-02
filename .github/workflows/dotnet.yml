@@ -12,6 +12,7 @@ jobs:
     name: Test
     strategy:
       max-parallel: 1
+      fail-fast: false
       matrix:
         test_storage: [pg, sqlite]
 
