@@ -6,6 +6,7 @@ using NSubstitute;
 
 namespace KuliJob.Tests;
 
+[NonParallelizable]
 public class CronTests : BaseTest
 {
     [Test]
