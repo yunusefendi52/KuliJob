@@ -10,6 +10,9 @@ on:
 jobs:
   test:
     name: Test
+    strategy:
+      matrix:
+        test_storage: [pg, sqlite]
 
     runs-on: ubuntu-24.04
 
@@ -34,12 +37,9 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    # - name: Test Postgres
-    #   run: |
-    #     K_TEST_STORAGE=pg dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
-    - name: Test Sqlite
+    - name: Test ${{ matrix.test_storage }}
       run: |
-        K_TEST_STORAGE=sqlite dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
+        K_TEST_STORAGE=${{ matrix.test_storage }} dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --no-build
     - name: Pack
       run: |
         scripts/pack.sh
