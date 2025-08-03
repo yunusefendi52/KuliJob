@@ -16,7 +16,6 @@ internal record class MethodExprCall
     {
         public string TypeName { get; set; } = null!;
 
-        // No direct object conversion in System.Text.Json
         public object? Value { get; set; }
     }
 }
@@ -88,7 +87,7 @@ internal class ExpressionSerializer
 
     public async Task InvokeExpr(IServiceProvider serviceProvider, MethodExprCall methodExprCall)
     {
-        var declType = Type.GetType(methodExprCall.DeclType, false) ?? throw new ArgumentException($"Type not found {methodExprCall.DeclType}");
+        var declType = Type.GetType(methodExprCall.DeclType, false) ?? throw new ArgumentException($"Type job to execute not found {methodExprCall.DeclType}");
         var instance = declType.IsAbstract && declType.IsSealed ? null : ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, declType);
         var arguments = methodExprCall.Arguments?.Select(v => HandleElementTypes(v!)).ToArray();
         var argTypes = methodExprCall.Arguments?.Select(v => Type.GetType(v!.TypeName))?.ToArray() ?? [];
@@ -111,43 +110,7 @@ internal class ExpressionSerializer
         }
         var type = Type.GetType(exprCallArg.TypeName);
         var jsonEl = jsonElNull.Value;
-        if (type == typeof(string))
-        {
-            return jsonEl.GetString();
-        }
-        else if (type == typeof(int))
-        {
-            return jsonEl.TryGetInt32(out var value) ? value : null;
-        }
-        else if (type == typeof(short))
-        {
-            return jsonEl.TryGetInt16(out var value) ? value : null;
-        }
-        else if (type == typeof(long))
-        {
-            return jsonEl.TryGetInt64(out var value) ? value : null;
-        }
-        else if (type == typeof(Guid))
-        {
-            return jsonEl.TryGetGuid(out var value) ? value : null;
-        }
-        else if (type == typeof(DateTime))
-        {
-            return jsonEl.TryGetDateTime(out var value) ? value : null;
-        }
-        else if (type == typeof(DateTimeOffset))
-        {
-            return jsonEl.TryGetDateTimeOffset(out var value) ? value : null;
-        }
-        else if (type == typeof(bool))
-        {
-            return jsonEl.GetBoolean();
-        }
-        else if (type == typeof(decimal))
-        {
-            return jsonEl.TryGetDecimal(out var value) ? value : null;
-        }
-
-        throw new ArgumentException($"Argument type not supported {type}");
+        var jsonValue = jsonEl.Deserialize(type!, Serializer.jsonSerializerOptions);
+        return jsonValue;
     }
 }

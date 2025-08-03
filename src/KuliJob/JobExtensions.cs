@@ -34,8 +34,7 @@ public static class JobExtensions
         serviceCollection.AddSingleton<Serializer>();
         serviceCollection.AddHostedService(static sp => sp.GetRequiredService<JobServiceHosted>());
         serviceCollection.AddSingleton<ExpressionSerializer>();
-        config.AddKuliJob<ExprJob>("expr_job");
-        config.AddKuliJob<CronJobHandler>();
+        serviceCollection.AddScoped<CronJobHandler>();
         serviceCollection.AddSingleton<ICronJob, CronJobImpl>();
         serviceCollection.AddSingleton<CronRegisterService>();
         serviceCollection.AddHostedService<CronRegisterService>();

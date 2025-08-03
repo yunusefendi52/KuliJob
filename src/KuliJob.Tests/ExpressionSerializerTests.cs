@@ -43,14 +43,14 @@ public class ExpressionSerializerTests
     }
 
     [Test]
-    public async Task CanSerializeTaskMethod_WithInvalid_Tuple()
+    public async Task CanSerializeTaskMethod_With_Tuple()
     {
         var services = new ServiceCollection();
         var sp = services.BuildServiceProvider();
         var serializer = new ExpressionSerializer();
         var tuple = (0.5, double.MaxValue);
         var lson = serializer.FromExpr(() => TestMethodInvalidParams(tuple));
-        await Assert.That(() => serializer.InvokeExpr(sp, lson)).Throws<ArgumentException>();
+        await Assert.That(() => serializer.InvokeExpr(sp, lson)).ThrowsNothing();
     }
 
     internal static async Task TaskMethodParams(
@@ -143,7 +143,7 @@ public class ExpressionSerializerTests
         {
             DeclType = "MyType",
             MethodName = "Exists",
-        })).ThrowsException().WithMessageMatching(StringMatcher.AsWildcard("Type not found*"));
+        })).ThrowsException().WithMessageMatching(StringMatcher.AsWildcard("Type job to execute not*"));
 
         await Assert.That(() => serializer.InvokeExpr(sp, "invalid_json")).Throws<JsonException>();
     }

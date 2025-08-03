@@ -137,9 +137,8 @@ internal class JobServerScheduler(
             cts.Token.ThrowIfCancellationRequested();
             await using var serviceScope = serviceScopeFactory.CreateAsyncScope();
             var sp = serviceScope.ServiceProvider;
-            var jobFactory = sp.GetRequiredService<JobFactory>();
-            var jobHandler = jobFactory.ResolveService(sp, jobInput.JobName) ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
-            var jobDataMap = serializer.Deserialize<JobDataMap>(jobInput.JobData);
+
+            var jobDataMap = serializer.Deserialize<JobDataMap>(jobInput.JobData!);
             var jobContext = new JobContext
             {
                 Services = sp,
@@ -147,7 +146,28 @@ internal class JobServerScheduler(
                 JobData = jobDataMap!,
                 RetryCount = jobInput.RetryCount,
             };
-            await jobHandler.Execute(jobContext);
+
+            var isExprJob = jobDataMap?.ContainsKey("k_type") ?? false;
+            if (isExprJob)
+            {
+                var kType = jobDataMap!.GetValue<string>("k_type");
+                var kMethodName = jobDataMap.GetValue<string>("k_methodName");
+                var kArgs = jobDataMap.GetValue<IEnumerable<MethodExprCall.MethodExprCallArg?>>("k_args");
+                var exprSerializer = sp.GetRequiredService<ExpressionSerializer>();
+                var serviceProvider = sp.GetRequiredService<IServiceProvider>();
+                await exprSerializer.InvokeExpr(serviceProvider, new MethodExprCall
+                {
+                    DeclType = kType!,
+                    MethodName = kMethodName!,
+                    Arguments = kArgs,
+                });
+            }
+            else
+            {
+                var jobFactory = sp.GetRequiredService<JobFactory>();
+                var jobHandler = jobFactory.ResolveService(sp, jobInput.JobName) ?? throw new ArgumentException($"No handler registered for job type {jobInput.JobName}. Call {nameof(JobExtensions.AddKuliJob)} to register job");
+                await jobHandler.Execute(jobContext);
+            }
             await storage.CompleteJobById(jobInput.Id);
         }
         catch (Exception ex)
@@ -195,7 +215,8 @@ internal class JobServerScheduler(
     async Task<Guid> EnqueueFromExpr(LambdaExpression expression, DateTimeOffset startAfter, QueueOptions? scheduleOptions = null)
     {
         var methodArg = expressionSerializer.FromExprToObject(expression)!;
-        return await Enqueue("expr_job", startAfter, new JobDataMap
+        var jobName = $"{methodArg.DeclType.Split(',')[0]}.{methodArg.MethodName}";
+        return await Enqueue(jobName, startAfter, new JobDataMap
         {
             { "k_type", methodArg.DeclType },
             { "k_methodName", methodArg.MethodName },

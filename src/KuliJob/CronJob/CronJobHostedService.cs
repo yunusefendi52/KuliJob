@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Cronos;
 using KuliJob.Storages;
 
@@ -57,13 +58,14 @@ internal class CronJobSchedulerService(
     {
         var cronos = await jobStorage.GetCrons();
         var currCronos = cronos.Where(v => configuration.CronBuilders.Keys.Any(t => t == v.Name)).ToList();
+        Serializer serializer = new();
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 var sw = Stopwatch.StartNew();
-                
+
                 await Parallel.ForEachAsync(currCronos, new ParallelOptions
                 {
                     CancellationToken = stoppingToken,
@@ -79,11 +81,17 @@ internal class CronJobSchedulerService(
                         return;
                     }
 
-                    var scheduler = sp.GetRequiredService<IQueueJob>();
-                    await scheduler.Enqueue<CronJobHandler>(new JobDataMap
+                    var cronData = JsonSerializer.Deserialize<CronData>(cron.Data, Serializer.jsonSerializerOptions)!;
+                    var methodExpr = cronData.Expr;
+                    if (string.IsNullOrWhiteSpace(methodExpr))
                     {
-                        { "k_cron", cron },
-                    }, new()
+                        throw new ArgumentException("Invalid cron job handler");
+                    }
+
+                    var queueExprJob = sp.GetRequiredService<IQueueExprJob>();
+                    var jobFactory = sp.GetRequiredService<JobFactory>();
+                    var methodExprCall = serializer.Deserialize<MethodExprCall>(methodExpr)!;
+                    await queueExprJob.Enqueue<CronJobHandler>(t => t.Execute(methodExprCall), new QueueOptions()
                     {
                         Queue = JobExtensions.DefaultCronName,
                         ThrottleKey = throttleKey,

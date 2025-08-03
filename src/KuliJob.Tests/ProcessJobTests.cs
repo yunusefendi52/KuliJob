@@ -24,6 +24,7 @@ public class ProcessJobTests : BaseTest
         var job1 = results[0]!;
         var job2 = results[1]!;
         var job3 = results[2]!;
+        await Assert.That(job1.StateMessage).IsNull();
         await Assert.That(job1.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job2.JobState).IsEqualTo(JobState.Completed);
         await Assert.That(job3.JobState).IsEqualTo(JobState.Completed);
