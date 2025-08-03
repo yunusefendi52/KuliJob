@@ -7,7 +7,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class JobExtensions
 {
-    internal const string DefaultCronName = "k_queue_cron";
+    internal const string DefaultCronName = "default"; // "k_queue_cron";
 
     public static void AddKuliJob(
         this IServiceCollection serviceCollection,
@@ -20,10 +20,10 @@ public static class JobExtensions
             ServiceCollection = serviceCollection,
             JobFactory = jobFactory,
         };
-        if (!config.Queues.Add(DefaultCronName))
-        {
-            throw new Exception($"You cannot add reserved queue {DefaultCronName}");
-        }
+        // if (!config.Queues.Add(DefaultCronName))
+        // {
+        //     throw new Exception($"You cannot add reserved queue {DefaultCronName}");
+        // }
         configure?.Invoke(config);
         serviceCollection.TryAddSingleton<MyClock>();
         serviceCollection.AddSingleton(config);
