@@ -1,1 +1,1 @@
-﻿{"declType":"KuliJob.Tests.IMyService, KuliJob.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null","methodName":"MyMethod","arguments":[]}
+﻿{"declType":"KuliJob.Tests.IMyService, KuliJob.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null","methodName":"MyMethod","arguments":[],"argumentsName":[]}

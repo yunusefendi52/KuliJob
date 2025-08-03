@@ -1,1 +1,1 @@
-﻿{"declType":"KuliJob.Tests.ExpressionSerializerTests, KuliJob.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null","methodName":"TaskMethod","arguments":[]}
+﻿{"declType":"KuliJob.Tests.ExpressionSerializerTests, KuliJob.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null","methodName":"TaskMethod","arguments":[],"argumentsName":[]}
