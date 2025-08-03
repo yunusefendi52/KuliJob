@@ -21,6 +21,31 @@ const jobDuration = computed(() => {
     const durationms = new Date(successState.createdAt).getTime() - new Date(failedState.createdAt).getTime()
     return durationms
 })
+const jobData = computed(() => {
+    const jobDataStr = data.value?.jobData
+    if (!jobDataStr) {
+        return undefined
+    }
+    return JSON.parse(jobDataStr)
+})
+const codeLanguage = computed(() => jobData.value?.k_type ? 'table_view' : 'json')
+
+const dataParams = computed(() => {
+    if (codeLanguage.value === 'json') {
+        return undefined
+    }
+
+    const methodExprCall = jobData.value?.k_args?.find(() => true) || []
+    const methodArgs = methodExprCall.value.arguments
+    const argumentsName = methodExprCall.value.argumentsName || []
+
+    return methodArgs.map((e: any, index: number) => {
+        return {
+            name: argumentsName[index],
+            value: e.value,
+        }
+    })
+})
 </script>
 
 <template>
@@ -68,7 +93,14 @@ const jobDuration = computed(() => {
         <USeparator class="my-5" />
         <div class="flex flex-col gap-1">
             <span class="text-xl font-medium mb-2">Data Parameters</span>
-            <JsonHighlight :code="data?.jobData" />
+            <template v-if="codeLanguage === 'json'">
+                <CodeHighlight :code="data?.jobData" />
+            </template>
+            <template v-else>
+                <div>
+                    <UTable :data="dataParams" class="flex-1" />
+                </div>
+            </template>
         </div>
         <USeparator class="my-5" />
         <div class="flex flex-col gap-1">

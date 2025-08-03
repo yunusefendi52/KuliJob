@@ -11,10 +11,12 @@ internal record class MethodExprCall
     public required string MethodName { get; set; }
 
     public IEnumerable<MethodExprCallArg?>? Arguments { get; set; }
+    public IEnumerable<string?>? ArgumentsName { get; set; }
 
     internal class MethodExprCallArg
     {
         public string TypeName { get; set; } = null!;
+        public string? ParamName { get; set; }
 
         public object? Value { get; set; }
     }
@@ -48,7 +50,9 @@ internal class ExpressionSerializer
             throw new ArgumentException($"DeclaringType is not supported {declType}");
         }
         var methodName = methodCallExpression.Method.Name;
-        var arguments = methodCallExpression.Arguments.Select(v =>
+        var argumentParamsName = methodCallExpression.Method.GetParameters()
+            .Select(v => v.Name);
+        var arguments = methodCallExpression.Arguments.Select((v, i) =>
         {
             if (v is ConstantExpression constantExpression)
             {
@@ -76,6 +80,7 @@ internal class ExpressionSerializer
             DeclType = declType!,
             MethodName = methodName,
             Arguments = arguments,
+            ArgumentsName = argumentParamsName,
         };
     }
 

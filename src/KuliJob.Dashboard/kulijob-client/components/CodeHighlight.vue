@@ -1,8 +1,11 @@
 <script setup lang="ts">
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
+    language?: 'json',
     code?: string | undefined,
-}>()
+}>(), {
+    language: 'json',
+})
 
 function formatJson(data?: string | undefined) {
     if (!data) {
@@ -10,12 +13,21 @@ function formatJson(data?: string | undefined) {
     }
     return JSON.stringify(JSON.parse(data), null, 4)
 }
+
+const code = computed(() => {
+    switch (props.language) {
+        case 'json':
+            return formatJson(props.code)
+        default:
+            return undefined
+    }
+})
 </script>
 
 <template>
     <ClientOnly>
         <div class="rounded">
-            <highlightjs language='json' :code="formatJson(props.code)" />
+            <highlightjs :language='props.language' :code="code" />
         </div>
     </ClientOnly>
 </template>
